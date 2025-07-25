@@ -49,7 +49,7 @@ function saveUserTags() {
 }
 
 let doubanMovieTvCurrentSwitch = 'movie';
-let doubanCurrentTag = '熱門';
+let doubanCurrentTag = '热门';
 let doubanPageStart = 0;
 const doubanPageSize = 16; // 一次顯示的項目數量
 
