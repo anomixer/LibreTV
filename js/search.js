@@ -2,7 +2,7 @@ async function searchByAPIAndKeyWord(apiId, query) {
     try {
         let apiUrl, apiName, apiBaseUrl;
         
-        // 处理自定义API
+        // 處理自定義API
         if (apiId.startsWith('custom_')) {
             const customIndex = apiId.replace('custom_', '');
             const customApi = getCustomApiInfo(customIndex);
@@ -12,14 +12,14 @@ async function searchByAPIAndKeyWord(apiId, query) {
             apiUrl = apiBaseUrl + API_CONFIG.search.path + encodeURIComponent(query);
             apiName = customApi.name;
         } else {
-            // 内置API
+            // 內置API
             if (!API_SITES[apiId]) return [];
             apiBaseUrl = API_SITES[apiId].api;
             apiUrl = apiBaseUrl + API_CONFIG.search.path + encodeURIComponent(query);
             apiName = API_SITES[apiId].name;
         }
         
-        // 添加超时处理
+        // 添加超時處理
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
         
@@ -40,7 +40,7 @@ async function searchByAPIAndKeyWord(apiId, query) {
             return [];
         }
         
-        // 处理第一页结果
+        // 處理第一頁結果
         const results = data.list.map(item => ({
             ...item,
             source_name: apiName,
@@ -48,22 +48,22 @@ async function searchByAPIAndKeyWord(apiId, query) {
             api_url: apiId.startsWith('custom_') ? getCustomApiInfo(apiId.replace('custom_', ''))?.url : undefined
         }));
         
-        // 获取总页数
+        // 獲取總頁數
         const pageCount = data.pagecount || 1;
-        // 确定需要获取的额外页数 (最多获取maxPages页)
+        // 確定需要獲取的額外頁數 (最多獲取maxPages頁)
         const pagesToFetch = Math.min(pageCount - 1, API_CONFIG.search.maxPages - 1);
         
-        // 如果有额外页数，获取更多页的结果
+        // 如果有額外頁數，獲取更多頁的結果
         if (pagesToFetch > 0) {
             const additionalPagePromises = [];
             
             for (let page = 2; page <= pagesToFetch + 1; page++) {
-                // 构建分页URL
+                // 構建分頁URL
                 const pageUrl = apiBaseUrl + API_CONFIG.search.pagePath
                     .replace('{query}', encodeURIComponent(query))
                     .replace('{page}', page);
                 
-                // 创建获取额外页的Promise
+                // 創建獲取額外頁的Promise
                 const pagePromise = (async () => {
                     try {
                         const pageController = new AbortController();
@@ -82,7 +82,7 @@ async function searchByAPIAndKeyWord(apiId, query) {
                         
                         if (!pageData || !pageData.list || !Array.isArray(pageData.list)) return [];
                         
-                        // 处理当前页结果
+                        // 處理當前頁結果
                         return pageData.list.map(item => ({
                             ...item,
                             source_name: apiName,
@@ -90,7 +90,7 @@ async function searchByAPIAndKeyWord(apiId, query) {
                             api_url: apiId.startsWith('custom_') ? getCustomApiInfo(apiId.replace('custom_', ''))?.url : undefined
                         }));
                     } catch (error) {
-                        console.warn(`API ${apiId} 第${page}页搜索失败:`, error);
+                        console.warn(`API ${apiId} 第${page}頁搜索失敗:`, error);
                         return [];
                     }
                 })();
@@ -98,10 +98,10 @@ async function searchByAPIAndKeyWord(apiId, query) {
                 additionalPagePromises.push(pagePromise);
             }
             
-            // 等待所有额外页的结果
+            // 等待所有額外頁的結果
             const additionalResults = await Promise.all(additionalPagePromises);
             
-            // 合并所有页的结果
+            // 合併所有頁的結果
             additionalResults.forEach(pageResults => {
                 if (pageResults.length > 0) {
                     results.push(...pageResults);
@@ -111,7 +111,7 @@ async function searchByAPIAndKeyWord(apiId, query) {
         
         return results;
     } catch (error) {
-        console.warn(`API ${apiId} 搜索失败:`, error);
+        console.warn(`API ${apiId} 搜索失敗:`, error);
         return [];
     }
 }

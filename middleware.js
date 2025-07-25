@@ -1,4 +1,4 @@
-import { sha256 } from './js/sha256.js'; // 需新建或引入SHA-256实现
+import { sha256 } from './js/sha256.js'; // 需新建或引入SHA-256實現
 
 // Vercel Middleware to inject environment variables
 export default async function middleware(request) {
@@ -34,10 +34,10 @@ export default async function middleware(request) {
   const adminpassword = process.env.ADMINPASSWORD || '';
   let adminpasswordHash = '';
   if (adminpassword) {
-    adminpasswordHash = await sha256(adminpassword); // 修复变量名
+    adminpasswordHash = await sha256(adminpassword); // 修復變量名
   }
   
-  // 合并两次替换为一次操作
+  // 合併兩次替換為一次操作
   let modifiedHtml = originalHtml
     .replace(
       'window.__ENV__.PASSWORD = "{{PASSWORD}}";',
@@ -48,7 +48,7 @@ export default async function middleware(request) {
       `window.__ENV__.ADMINPASSWORD = "${adminpasswordHash}"; // SHA-256 hash`
     );
 
-  // 修复Response构造
+  // 修復Response構造
   return new Response(modifiedHtml, {
     status: response.status,
     statusText: response.statusText,

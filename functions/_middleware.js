@@ -8,7 +8,7 @@ export async function onRequest(context) {
   if (contentType.includes("text/html")) {
     let html = await response.text();
     
-    // 处理普通密码
+    // 處理普通密碼
     const password = env.PASSWORD || "";
     let passwordHash = "";
     if (password) {
@@ -17,7 +17,7 @@ export async function onRequest(context) {
     html = html.replace('window.__ENV__.PASSWORD = "{{PASSWORD}}";', 
       `window.__ENV__.PASSWORD = "${passwordHash}";`);
 
-    // 处理管理员密码 - 确保这部分代码被执行
+    // 處理管理員密碼 - 確保這部分代碼被執行
     const adminPassword = env.ADMINPASSWORD || "";
     let adminPasswordHash = "";
     if (adminPassword) {

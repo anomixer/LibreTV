@@ -1,4 +1,4 @@
-/* 模态框通用样式 */
+/* 模態框通用樣式 */
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -58,7 +58,7 @@
     min-height: 0;
 }
 
-/* 密码验证模态框 */
+/* 密碼驗證模態框 */
 .password-modal {
     z-index: 65;
 }
@@ -101,7 +101,7 @@
     display: none;
 }
 
-/* 声明模态框 */
+/* 聲明模態框 */
 .disclaimer-modal {
     z-index: 60;
 }
@@ -193,7 +193,7 @@
     font-size: 1.125rem;
 }
 
-/* 动画效果 */
+/* 動畫效果 */
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
