@@ -219,12 +219,12 @@ async function handleCustomApiSpecialDetail(id, customApi) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
         
-        // 添加鉴权参数到代理URL
+        // 添加鑑權參數到代理URL
         const proxiedUrl = await window.ProxyAuth?.addAuthToProxyUrl ? 
             await window.ProxyAuth.addAuthToProxyUrl(PROXY_URL + encodeURIComponent(detailUrl)) :
             PROXY_URL + encodeURIComponent(detailUrl);
             
-        // 获取详情页HTML
+        // 獲取詳情頁HTML
         const response = await fetch(proxiedUrl, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -286,12 +286,12 @@ async function handleSpecialSourceDetail(id, sourceCode) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
         
-        // 添加鉴权参数到代理URL
+        // 添加鑑權參數到代理URL
         const proxiedUrl = await window.ProxyAuth?.addAuthToProxyUrl ? 
             await window.ProxyAuth.addAuthToProxyUrl(PROXY_URL + encodeURIComponent(detailUrl)) :
             PROXY_URL + encodeURIComponent(detailUrl);
             
-        // 获取详情页HTML
+        // 獲取詳情頁HTML
         const response = await fetch(proxiedUrl, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',

@@ -1,7 +1,9 @@
 // 豆瓣熱門電影電視劇推薦功能
 
-// 豆瓣标签列表 - 修改为默认标签
+// 豆瓣標籤列表 - 修改為默認標籤
+// 注意：豆瓣API使用簡體中文標籤搜索，這裡維持簡體以確保搜索正常
 let defaultMovieTags = ['热门', '最新', '经典', '豆瓣高分', '冷门佳片', '华语', '欧美', '韩国', '日本', '动作', '喜剧', '日综', '爱情', '科幻', '悬疑', '恐怖', '治愈'];
+
 let defaultTvTags = ['热门', '美剧', '英剧', '韩剧', '日剧', '国产剧', '港剧', '日本动画', '综艺', '纪录片'];
 
 // 用戶標籤列表 - 存儲用戶實際使用的標籤（包含保留的系統標籤和用戶添加的自定義標籤）
@@ -457,13 +459,14 @@ async function fetchDoubanData(url) {
     };
 
     try {
-        // 添加鉴权参数到代理URL
+        // 添加鑑權參數到代理URL
         const proxiedUrl = await window.ProxyAuth?.addAuthToProxyUrl ? 
             await window.ProxyAuth.addAuthToProxyUrl(PROXY_URL + encodeURIComponent(url)) :
             PROXY_URL + encodeURIComponent(url);
             
-        // 尝试直接访问（豆瓣API可能允许部分CORS请求）
+        // 嘗試透過代理訪問豆瓣API
         const response = await fetch(proxiedUrl, fetchOptions);
+
         clearTimeout(timeoutId);
         
         if (!response.ok) {
@@ -528,20 +531,25 @@ function renderDoubanCards(data, container) {
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;');
             
-            // 處理圖片URL
-            // 1. 直接使用豆瓣圖片URL (添加no-referrer屬性)
+            // 100% 對齊 MoonTV：使用專用圖片代理 API (/api/image-proxy?url=)
             const originalCoverUrl = item.cover;
-            
-            // 2. 也準備代理URL作為備選
-            const proxiedCoverUrl = PROXY_URL + encodeURIComponent(originalCoverUrl);
+            const proxiedCoverUrl = `/api/image-proxy?url=${encodeURIComponent(originalCoverUrl)}`;
+            const weservCoverUrl = `https://images.weserv.nl/?url=${originalCoverUrl.replace(/^https?:\/\//, '')}`;
             
             // 為不同設備優化卡片佈局
             card.innerHTML = `
                 <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
-                    <img src="${originalCoverUrl}" alt="${safeTitle}" 
+                    <img src="${proxiedCoverUrl}" alt="${safeTitle}" 
                         class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                        onerror="this.onerror=null; this.src='${proxiedCoverUrl}'; this.classList.add('object-contain');"
-                        loading="lazy" referrerpolicy="no-referrer">
+                        onerror="this.onerror=null; this.src='${weservCoverUrl}';"
+                        loading="lazy">
+
+
+
+
+
+
+
                     <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
                     <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm">
                         <span class="text-yellow-400">★</span> ${safeRate}

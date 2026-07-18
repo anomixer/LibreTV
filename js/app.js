@@ -484,9 +484,21 @@ function toggleSettings(e) {
     const settingsPanel = document.getElementById('settingsPanel');
     if (!settingsPanel) return;
 
+    // 檢查是否有管理員密碼
+    const hasAdminPassword = window.__ENV__?.ADMINPASSWORD && 
+                           window.__ENV__.ADMINPASSWORD.length === 64 && 
+                           !/^0+$/.test(window.__ENV__.ADMINPASSWORD);
+
     if (settingsPanel.classList.contains('show')) {
         settingsPanel.classList.remove('show');
     } else {
+        // 只有設置了管理員密碼且未驗證時才攔截
+        if (hasAdminPassword && !isVerified('ADMINPASSWORD')) {
+            e.preventDefault();
+            e.stopPropagation();
+            showAdminPasswordModal();
+            return;
+        }
         settingsPanel.classList.add('show');
     }
 
@@ -605,12 +617,12 @@ function getCustomApiInfo(customApiIndex) {
 
 // 搜索功能 - 修改為支持多選API和多頁結果
 async function search() {
-    // 强化的密码保护校验 - 防止绕过
+    // 強化的密碼保護校驗 - 防止繞過
     try {
         if (window.ensurePasswordProtection) {
             window.ensurePasswordProtection();
         } else {
-            // 兼容性检查
+            // 兼容性檢查
             if (window.isPasswordProtected && window.isPasswordVerified) {
                 if (window.isPasswordProtected() && !window.isPasswordVerified()) {
                     showPasswordModal && showPasswordModal();

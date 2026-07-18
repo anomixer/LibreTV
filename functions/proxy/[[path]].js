@@ -7,8 +7,8 @@
 // FILTER_DISCONTINUITY (不再需要，設為 false 或移除)
 // USER_AGENTS_JSON (例如 ["UA1", "UA2"]) - JSON 字符串數組
 // DEBUG (例如 false 或 true)
-// PASSWORD (例如 "your_password") - 鉴权密码
-// --- 配置结束 ---
+// PASSWORD (例如 "your_password") - 鑑權密碼
+// --- 配置結束 ---
 
 // --- 常量 (之前在 config.js 中，現在移到這裡，因為它們與代理邏輯相關) ---
 const MEDIA_FILE_EXTENSIONS = [
@@ -22,30 +22,13 @@ const MEDIA_CONTENT_TYPES = ['video/', 'audio/', 'image/'];
 
 /**
  * 主要的 Pages Function 處理函數
- * 攔截髮往 /proxy/* 的請求
+ * 攔截發往 /proxy/* 的請求
  */
 export async function onRequest(context) {
     const { request, env, next, waitUntil } = context; // next 和 waitUntil 可能需要
     const url = new URL(request.url);
 
-    // 验证鉴权（主函数调用）
-    const isValidAuth = await validateAuth(request, env);
-    if (!isValidAuth) {
-        return new Response(JSON.stringify({
-            success: false,
-            error: '代理访问未授权：请检查密码配置或鉴权参数'
-        }), { 
-            status: 401,
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS',
-                'Access-Control-Allow-Headers': '*',
-                'Content-Type': 'application/json'
-            }
-        });
-    }
-
-    // --- 从环境变量读取配置 ---
+    // --- 從環境變量讀取配置 ---
     const DEBUG_ENABLED = (env.DEBUG === 'true');
     const CACHE_TTL = parseInt(env.CACHE_TTL || '86400'); // 默認 24 小時
     const MAX_RECURSION = parseInt(env.MAX_RECURSION || '5'); // 默認 5 層
@@ -72,20 +55,27 @@ export async function onRequest(context) {
 
     // --- 輔助函數 ---
 
-    // 验证代理请求的鉴权
+    // 輸出調試日誌 (需要設置 DEBUG: true 環境變量)
+    function logDebug(message) {
+        if (DEBUG_ENABLED) {
+            console.log(`[Proxy Func] ${message}`);
+        }
+    }
+
+    // 驗證代理請求的鑑權
     async function validateAuth(request, env) {
-        const url = new URL(request.url);
-        const authHash = url.searchParams.get('auth');
-        const timestamp = url.searchParams.get('t');
-        
-        // 获取服务器端密码
+        const reqUrl = new URL(request.url);
+        const authHash = reqUrl.searchParams.get('auth');
+        const timestamp = reqUrl.searchParams.get('t');
+
+        // 獲取服務器端密碼
         const serverPassword = env.PASSWORD;
         if (!serverPassword) {
-            console.error('服务器未设置 PASSWORD 环境变量，代理访问被拒绝');
-            return false;
+            // 未設置密碼時，允許所有請求通過（向後兼容）
+            return true;
         }
-        
-        // 使用 SHA-256 哈希算法（与其他平台保持一致）
+
+        // 使用 SHA-256 哈希算法（與其他平台保持一致）
         // 在 Cloudflare Workers 中使用 crypto.subtle
         try {
             const encoder = new TextEncoder();
@@ -93,46 +83,44 @@ export async function onRequest(context) {
             const hashBuffer = await crypto.subtle.digest('SHA-256', data);
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             const serverPasswordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            
+
             if (!authHash || authHash !== serverPasswordHash) {
-                console.warn('代理请求鉴权失败：密码哈希不匹配');
+                console.warn('代理請求鑑權失敗：密碼哈希不匹配');
                 return false;
             }
         } catch (error) {
-            console.error('计算密码哈希失败:', error);
+            console.error('計算密碼哈希失敗:', error);
             return false;
         }
-        
-        // 验证时间戳（10分钟有效期）
+
+        // 驗證時間戳（10分鐘有效期）
         if (timestamp) {
             const now = Date.now();
-            const maxAge = 10 * 60 * 1000; // 10分钟
+            const maxAge = 10 * 60 * 1000; // 10分鐘
             if (now - parseInt(timestamp) > maxAge) {
-                console.warn('代理请求鉴权失败：时间戳过期');
+                console.warn('代理請求鑑權失敗：時間戳過期');
                 return false;
             }
         }
-        
+
         return true;
     }
 
-    // 验证鉴权（主函数调用）
-    if (!validateAuth(request, env)) {
-        return new Response('Unauthorized', { 
+    // 驗證鑑權（主函數調用）
+    const isValidAuth = await validateAuth(request, env);
+    if (!isValidAuth) {
+        return new Response(JSON.stringify({
+            success: false,
+            error: '代理訪問未授權：請檢查密碼配置或鑑權參數'
+        }), {
             status: 401,
             headers: {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS',
-                'Access-Control-Allow-Headers': '*'
+                'Access-Control-Allow-Headers': '*',
+                'Content-Type': 'application/json'
             }
         });
-    }
-
-    // 输出调试日志 (需要设置 DEBUG: true 环境变量)
-    function logDebug(message) {
-        if (DEBUG_ENABLED) {
-            console.log(`[Proxy Func] ${message}`);
-        }
     }
 
     // 從請求路徑中提取目標 URL
@@ -248,14 +236,23 @@ export async function onRequest(context) {
 
     // 獲取遠程內容及其類型
     async function fetchContentWithType(targetUrl) {
+        let referer = '';
+        try {
+            const parsed = new URL(targetUrl);
+            if (parsed.hostname.includes('douban')) {
+                referer = 'https://movie.douban.com/';
+            } else {
+                referer = request.headers.get('Referer') || `${parsed.protocol}//${parsed.hostname}/`;
+            }
+        } catch (e) {}
+
         const headers = new Headers({
             'User-Agent': getRandomUserAgent(),
             'Accept': '*/*',
-            // 嘗試傳遞一些原始請求的頭信息
             'Accept-Language': request.headers.get('Accept-Language') || 'zh-CN,zh;q=0.9,en;q=0.8',
-            // 嘗試設置 Referer 為目標網站的域名，或者傳遞原始 Referer
-            'Referer': request.headers.get('Referer') || new URL(targetUrl).origin
         });
+        if (referer) headers.set('Referer', referer);
+
 
         try {
             // 直接請求目標 URL
@@ -269,10 +266,18 @@ export async function onRequest(context) {
                  throw new Error(`HTTP error ${response.status}: ${response.statusText}. URL: ${targetUrl}. Body: ${errorBody.substring(0, 150)}`);
             }
 
-            // 讀取響應內容為文本
-            const content = await response.text();
             const contentType = response.headers.get('Content-Type') || '';
-            logDebug(`請求成功: ${targetUrl}, Content-Type: ${contentType}, 內容長度: ${content.length}`);
+            const isText = contentType.includes('mpegurl') || contentType.includes('json') || contentType.includes('text/') || contentType.includes('javascript') || contentType.includes('xml');
+
+            let content;
+            if (isText) {
+                content = await response.text();
+                logDebug(`請求成功 (文字模式): ${targetUrl}, Content-Type: ${contentType}, 內容長度: ${content.length}`);
+            } else {
+                content = await response.arrayBuffer();
+                logDebug(`請求成功 (二進制模式): ${targetUrl}, Content-Type: ${contentType}, 位元組長度: ${content.byteLength}`);
+            }
+
             return { content, contentType, responseHeaders: response.headers }; // 同時返回原始響應頭
 
         } catch (error) {
@@ -527,7 +532,13 @@ export async function onRequest(context) {
                         return createM3u8Response(processedM3u8);
                     } else {
                         logDebug(`從緩存返回非 M3U8 內容: ${targetUrl}`);
-                        return createResponse(content, 200, new Headers(headers));
+                        const respHeaders = new Headers(headers);
+                        respHeaders.delete('content-encoding');
+                        respHeaders.delete('Content-Encoding');
+                        respHeaders.delete('content-length');
+                        respHeaders.delete('Content-Length');
+                        return createResponse(content, 200, respHeaders);
+
                     }
                 } else {
                      logDebug(`[緩存未命中] 原始內容: ${targetUrl}`);
@@ -564,12 +575,19 @@ export async function onRequest(context) {
         } else {
             logDebug(`內容不是 M3U8 (類型: ${contentType})，直接返回: ${targetUrl}`);
             const finalHeaders = new Headers(responseHeaders);
+            // 刪除壓縮頭與長度頭（因為 Cloudflare 已經解壓了內容，否則瀏覽器會爆出 ERR_CONTENT_DECODING_FAILED 破圖）
+            finalHeaders.delete('content-encoding');
+            finalHeaders.delete('Content-Encoding');
+            finalHeaders.delete('content-length');
+            finalHeaders.delete('Content-Length');
+
             finalHeaders.set('Cache-Control', `public, max-age=${CACHE_TTL}`);
             // 添加 CORS 頭，確保非 M3U8 內容也能跨域訪問（例如圖片、字幕文件等）
             finalHeaders.set("Access-Control-Allow-Origin", "*");
             finalHeaders.set("Access-Control-Allow-Methods", "GET, HEAD, POST, OPTIONS");
             finalHeaders.set("Access-Control-Allow-Headers", "*");
             return createResponse(content, 200, finalHeaders);
+
         }
 
     } catch (error) {

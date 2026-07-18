@@ -1,11 +1,11 @@
 // UI相關函數
 function toggleSettings(e) {
-    // 强化的密码保护校验 - 防止绕过
+    // 強化的密碼保護校驗 - 防止繞過
     try {
         if (window.ensurePasswordProtection) {
             window.ensurePasswordProtection();
         } else {
-            // 兼容性检查
+            // 兼容性檢查
             if (window.isPasswordProtected && window.isPasswordVerified) {
                 if (window.isPasswordProtected() && !window.isPasswordVerified()) {
                     showPasswordModal && showPasswordModal();
@@ -17,6 +17,7 @@ function toggleSettings(e) {
         console.warn('Password protection check failed:', error.message);
         return;
     }
+
     // 阻止事件冒泡，防止觸發document的點擊事件
     e && e.stopPropagation();
     const panel = document.getElementById('settingsPanel');

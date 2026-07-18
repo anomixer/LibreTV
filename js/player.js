@@ -95,23 +95,40 @@ const isWebkit = (typeof window.webkitConvertPointFromNodeToPage === 'function')
 Artplayer.FULLSCREEN_WEB_IN_BODY = true;
 
 // 頁面加載
-document.addEventListener('DOMContentLoaded', function () {
+function tryInitPlayerPage() {
+    console.log("[LibreTV] 嘗試初始化播放器頁面...");
+    console.log("[LibreTV] isPasswordProtected:", typeof isPasswordProtected === 'function' ? isPasswordProtected() : 'undefined');
+    console.log("[LibreTV] isPasswordVerified:", typeof isPasswordVerified === 'function' ? isPasswordVerified() : 'undefined');
+    
     // 先檢查用戶是否已通過密碼驗證
-    if (!isPasswordVerified()) {
+    if (typeof isPasswordVerified === 'function' && !isPasswordVerified()) {
+        console.log("[LibreTV] 密碼未驗證，阻止頁面載入並隱藏提示");
         // 隱藏加載提示
-        document.getElementById('player-loading').style.display = 'none';
+        const loadingEl = document.getElementById('player-loading');
+        if (loadingEl) loadingEl.style.display = 'none';
         return;
     }
 
+    console.log("[LibreTV] 驗證通過，執行 initializePageContent");
     initializePageContent();
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryInitPlayerPage);
+} else {
+    // DOM 已經加載完畢，直接執行
+    tryInitPlayerPage();
+}
 
 // 監聽密碼驗證成功事件
 document.addEventListener('passwordVerified', () => {
-    document.getElementById('player-loading').style.display = 'block';
+    console.log("[LibreTV] 收到 passwordVerified 事件，開始載入");
+    const loadingEl = document.getElementById('player-loading');
+    if (loadingEl) loadingEl.style.display = 'block';
 
     initializePageContent();
 });
+
 
 // 初始化頁面內容
 function initializePageContent() {
@@ -1633,10 +1650,10 @@ async function showSwitchResourceModal() {
         allResults[opt.key] = result;
     }));
 
-    // 更新状态显示：开始速率测试
-    modalContent.innerHTML = '<div style="text-align:center;padding:20px;color:#aaa;grid-column:1/-1;">正在测试各资源速率...</div>';
+    // 更新狀態顯示：開始速率湋試
+    modalContent.innerHTML = '<div style="text-align:center;padding:20px;color:#aaa;grid-column:1/-1;">正在湋試各資源速率...</div>';
 
-    // 同时测试所有资源的速率
+    // 同時湋試所有資源的速率
     const speedResults = {};
     await Promise.all(Object.entries(allResults).map(async ([sourceKey, result]) => {
         if (result) {
@@ -1644,7 +1661,8 @@ async function showSwitchResourceModal() {
         }
     }));
 
-    // 对结果进行排序
+    // 對結果進行排序
+
     const sortedResults = Object.entries(allResults).sort(([keyA, resultA], [keyB, resultB]) => {
         // 當前播放的源放在最前面
         const isCurrentA = String(keyA) === String(currentSourceCode) && String(resultA.vod_id) === String(currentVideoId);
@@ -1653,7 +1671,7 @@ async function showSwitchResourceModal() {
         if (isCurrentA && !isCurrentB) return -1;
         if (!isCurrentA && isCurrentB) return 1;
         
-        // 其余按照速度排序，速度快的在前面（速度为-1表示失败，排到最后）
+        // 其餘按照速度排序，速度快的在前面（速度為-1表示失敗，排到最後）
         const speedA = speedResults[keyA]?.speed || 99999;
         const speedB = speedResults[keyB]?.speed || 99999;
         
@@ -1664,7 +1682,7 @@ async function showSwitchResourceModal() {
         return speedA - speedB;
     });
 
-    // 渲染资源列表
+    // 渲染資源列表
     let html = '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4">';
     
     for (const [sourceKey, result] of sortedResults) {
@@ -1672,14 +1690,14 @@ async function showSwitchResourceModal() {
         
         // 修復 isCurrentSource 判斷，確保類型一致
         const isCurrentSource = String(sourceKey) === String(currentSourceCode) && String(result.vod_id) === String(currentVideoId);
-        const sourceName = resourceOptions.find(opt => opt.key === sourceKey)?.name || '未知资源';
-        const speedResult = speedResults[sourceKey] || { speed: -1, error: '未测试' };
+        const sourceName = resourceOptions.find(opt => opt.key === sourceKey)?.name || '未知資源';
+        const speedResult = speedResults[sourceKey] || { speed: -1, error: '未湋試' };
         
         html += `
             <div class="relative group ${isCurrentSource ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-105 transition-transform'}" 
                  ${!isCurrentSource ? `onclick="switchToResource('${sourceKey}', '${result.vod_id}')"` : ''}>
                 <div class="aspect-[2/3] rounded-lg overflow-hidden bg-gray-800 relative">
-                    <img src="${result.vod_pic}" 
+                    <img src="${result.vod_pic ? `https://images.weserv.nl/?url=${result.vod_pic.replace(/^https?:\/\//, '')}` : ''}" 
                          alt="${result.vod_name}"
                          class="w-full h-full object-cover"
                          onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHJlY3QgeD0iMyIgeT0iMyIgd2lkdGg9IjE4IiBoZWlnaHQ9IjE4IiByeD0iMiIgcnk9IjIiPjwvcmVjdD48cGF0aCBkPSJNMjEgMTV2NGEyIDIgMCAwIDEtMiAySDVhMiAyIDAgMCAxLTItMnYtNCI+PC9wYXRoPjxwb2x5bGluZSBwb2ludHM9IjE3IDggMTIgMyA3IDgiPjwvcG9seWxpbmU+PHBhdGggZD0iTTEyIDN2MTIiPjwvcGF0aD48L3N2Zz4='">
@@ -1699,7 +1717,7 @@ async function showSwitchResourceModal() {
                 ${isCurrentSource ? `
                     <div class="absolute inset-0 flex items-center justify-center">
                         <div class="bg-blue-600 bg-opacity-75 rounded-lg px-2 py-0.5 text-xs text-white font-medium">
-                            当前播放
+                            當前播放
                         </div>
                     </div>
                 ` : ''}

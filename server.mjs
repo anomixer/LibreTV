@@ -118,52 +118,39 @@ function isValidUrl(urlString) {
   }
 }
 
-// 验证代理请求的鉴权
-function validateProxyAuth(req) {
-  const authHash = req.query.auth;
-  const timestamp = req.query.t;
-  
-  // 获取服务器端密码哈希
-  const serverPassword = config.password;
-  if (!serverPassword) {
-    console.error('服务器未设置 PASSWORD 环境变量，代理访问被拒绝');
-    return false;
-  }
-  
-  // 使用 crypto 模块计算 SHA-256 哈希
-  const serverPasswordHash = crypto.createHash('sha256').update(serverPassword).digest('hex');
-  
-  if (!authHash || authHash !== serverPasswordHash) {
-    console.warn('代理请求鉴权失败：密码哈希不匹配');
-    console.warn(`期望: ${serverPasswordHash}, 收到: ${authHash}`);
-    return false;
-  }
-  
-  // 验证时间戳（10分钟有效期）
-  if (timestamp) {
-    const now = Date.now();
-    const maxAge = 10 * 60 * 1000; // 10分钟
-    if (now - parseInt(timestamp) > maxAge) {
-      console.warn('代理请求鉴权失败：时间戳过期');
-      return false;
-    }
-  }
-  
-  return true;
-}
 
-app.get('/proxy/:encodedUrl', async (req, res) => {
+app.get('/api/image-proxy', async (req, res) => {
   try {
-    // 验证鉴权
-    if (!validateProxyAuth(req)) {
-      return res.status(401).json({
-        success: false,
-        error: '代理访问未授权：请检查密码配置或鉴权参数'
-      });
-    }
+    const imageUrl = req.query.url;
+    if (!imageUrl) return res.status(400).send('Missing url');
 
-    const encodedUrl = req.params.encodedUrl;
+    const response = await axios({
+      method: 'get',
+      url: imageUrl,
+      responseType: 'stream',
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Referer': 'https://movie.douban.com/',
+        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+      }
+    });
+
+    res.set('Content-Type', response.headers['content-type'] || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=15720000');
+    res.set('Access-Control-Allow-Origin', '*');
+    response.data.pipe(res);
+  } catch (error) {
+    res.status(500).send('Image fetch failed');
+  }
+});
+
+app.get(/^\/proxy\/(.+)$/, async (req, res) => {
+
+  try {
+    const encodedUrl = req.params[0];
     const targetUrl = decodeURIComponent(encodedUrl);
+
 
     // 安全验证
     if (!isValidUrl(targetUrl)) {
@@ -171,6 +158,19 @@ app.get('/proxy/:encodedUrl', async (req, res) => {
     }
 
     log(`代理请求: ${targetUrl}`);
+
+    // 僅對豆瓣圖片域名設置 Referer，其他API不加以免被拒絕
+    const requestHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Accept': '*/*',
+      'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+    };
+    try {
+      const parsed = new URL(targetUrl);
+      if (parsed.hostname.includes('douban')) {
+        requestHeaders['Referer'] = 'https://movie.douban.com/';
+      }
+    } catch (e) {}
 
     // 添加请求超时和重试逻辑
     const maxRetries = config.maxRetries;
@@ -183,12 +183,11 @@ app.get('/proxy/:encodedUrl', async (req, res) => {
           url: targetUrl,
           responseType: 'stream',
           timeout: config.timeout,
-          headers: {
-            'User-Agent': config.userAgent
-          }
+          headers: requestHeaders,
+          maxRedirects: 5,
         });
       } catch (error) {
-        if (retries < maxRetries) {
+        if (retries < maxRetries && error.response?.status !== 404) {
           retries++;
           log(`重试请求 (${retries}/${maxRetries}): ${targetUrl}`);
           return makeRequest();
@@ -207,15 +206,16 @@ app.get('/proxy/:encodedUrl', async (req, res) => {
     ).split(',');
     
     sensitiveHeaders.forEach(header => delete headers[header]);
+    // 強制允許跨域
     res.set(headers);
+    res.set('Access-Control-Allow-Origin', '*');
 
     // 管道传输响应流
     response.data.pipe(res);
   } catch (error) {
     console.error('代理请求错误:', error.message);
     if (error.response) {
-      res.status(error.response.status || 500);
-      error.response.data.pipe(res);
+      res.status(error.response.status || 500).send(`上游錯誤: ${error.response.status}`);
     } else {
       res.status(500).send(`请求失败: ${error.message}`);
     }
@@ -239,10 +239,11 @@ app.use((req, res) => {
 app.listen(config.port, () => {
   console.log(`服务器运行在 http://localhost:${config.port}`);
   if (config.password !== '') {
-    console.log('用户登录密码已设置');
+    console.log('用戶登錄密碼已設置');
   } else {
-    console.log('警告: 未设置 PASSWORD 环境变量，用户将被要求设置密码');
+    console.log('提示: 未設置 PASSWORD（本地開發模式，代理直接開放）');
   }
+
   if (config.debug) {
     console.log('调试模式已启用');
     console.log('配置:', { ...config, password: config.password ? '******' : '' });

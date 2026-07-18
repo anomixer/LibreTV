@@ -4,11 +4,11 @@ const PROXY_URL = '/proxy/';    // 適用於 Cloudflare, Netlify (帶重寫), Ve
 const SEARCH_HISTORY_KEY = 'videoSearchHistory';
 const MAX_HISTORY_ITEMS = 5;
 
-// 密码保护配置
-// 注意：PASSWORD 环境变量是必需的，所有部署都必须设置密码以确保安全
+// 密碼保護配置
 const PASSWORD_CONFIG = {
-    localStorageKey: 'passwordVerified',  // 存储验证状态的键名
-    verificationTTL: 90 * 24 * 60 * 60 * 1000  // 验证有效期（90天，约3个月）
+    localStorageKey: 'passwordVerified',  // 存儲驗證狀態的鍵名
+    verificationTTL: 90 * 24 * 60 * 60 * 1000,  // 驗證有效期（90天，約3個月）
+    adminLocalStorageKey: 'adminPasswordVerified'  // 新增的管理員驗證狀態的鍵名
 };
 
 // 網站信息配置
@@ -22,11 +22,166 @@ const SITE_CONFIG = {
 
 // API站點配置
 const API_SITES = {
+    dyttzy: {
+        api: 'http://caiji.dyttzyapi.com/api.php/provide/vod',
+        name: '電影天堂資源',
+        detail: 'http://caiji.dyttzyapi.com', 
+    },
+    ruyi: {
+        api: 'https://cj.rycjapi.com/api.php/provide/vod',
+        name: '如意資源',
+    },
+    bfzy: {
+        api: 'https://bfzyapi.com/api.php/provide/vod',
+        name: '暴風資源',
+    },
+    tyyszy: {
+        api: 'https://tyyszy.com/api.php/provide/vod',
+        name: '天涯資源',
+    },
+    xiaomaomi: {
+        api: 'https://zy.xmm.hk/api.php/provide/vod',
+        name: '小貓咪資源',
+    },
+    ffzy: {
+        api: 'http://ffzy5.tv/api.php/provide/vod',
+        name: '非凡影視',
+        detail: 'http://ffzy5.tv', 
+    },
+    heimuer: {
+        api: 'https://json.heimuer.xyz/api.php/provide/vod',
+        name: '黑木耳',
+        detail: 'https://heimuer.tv', 
+    },
+    zy360: {
+        api: 'https://360zy.com/api.php/provide/vod',
+        name: '360資源',
+    },
+    iqiyi: {
+        api: 'https://www.iqiyizyapi.com/api.php/provide/vod',
+        name: 'iqiyi資源',
+    },
+    wolong: {
+        api: 'https://wolongzyw.com/api.php/provide/vod',
+        name: '臥龍資源',
+    }, 
+    hwba: {
+        api: 'https://cjhwba.com/api.php/provide/vod',
+        name: '華為吧資源',
+    },
+    jisu: {
+        api: 'https://jszyapi.com/api.php/provide/vod',
+        name: '極速資源',
+        detail: 'https://jszyapi.com', 
+    },
+    dbzy: {
+        api: 'https://dbzy.tv/api.php/provide/vod',
+        name: '豆瓣資源',
+    },
+    mozhua: {
+        api: 'https://mozhuazy.com/api.php/provide/vod',
+        name: '魔爪資源',
+    },
+    mdzy: {
+        api: 'https://www.mdzyapi.com/api.php/provide/vod',
+        name: '魔都資源',
+    },
+    zuid: {
+        api: 'https://api.zuidapi.com/api.php/provide/vod',
+        name: '最大資源'
+    },
+    yinghua: {
+        api: 'https://m3u8.apiyhzy.com/api.php/provide/vod',
+        name: '櫻花資源'
+    },
+    baidu: {
+        api: 'https://api.apibdzy.com/api.php/provide/vod',
+        name: '百度雲資源'
+    },
+    wujin: {
+        api: 'https://api.wujinapi.me/api.php/provide/vod',
+        name: '無盡資源'
+    },
+    wwzy: {
+        api: 'https://wwzy.tv/api.php/provide/vod',
+        name: '旺旺短劇'
+    },
+    ikun: {
+        api: 'https://ikunzyapi.com/api.php/provide/vod',
+        name: 'iKun資源'
+    },
+    lzi: {
+        api: 'https://cj.lziapi.com/api.php/provide/vod/',
+        name: '量子資源站'
+    },
     testSource: {
         api: 'https://www.example.com/api.php/provide/vod',
         name: '空內容測試源',
         adult: true
-    }
+    },
+    // 下面是一些成人內容的API源，默認隱藏，使用本項目瀏覽黃色內容違背項目初衷
+    // 互聯網上傳播的色情內容將人徹底客體化、工具化，是性別解放和人類平等道路上的巨大障礙。
+    // 這些黃色影片是資本主義父權制壓迫的最惡毒體現，它將暴力和屈辱商品化，踐踏人的尊嚴，對受害者造成無法彌愈的傷害，並毒害社會關係。
+    // 資本為了利潤，不惜將最卑劣的剝削（包括對受害者和表演者的剝削）和暴力商品化，
+    // 把性別剝削塑造成"性享受"麻痺觀眾的意識，轉移我們對現實生活中矛盾和壓迫的注意力。
+    // 這些影片和背後的產業已經使數百萬男女"下海"，出賣自己的身體，甚至以此為生計。
+    // 而作為觀眾無辜嗎？毫無疑問，他們促成了黃色產業鏈的再生產。
+    // 我們提供此警告，是希望您能認清這些內容的本質——它們是壓迫和奴役的工具，而非娛樂。
+    // ckzy: {
+    //     api: 'https://www.ckzy1.com',
+    //     name: 'CK資源',
+    //     adult: true
+    // },
+    // jkun: {
+    //     api: 'https://jkunzyapi.com',
+    //     name: 'jkun資源',
+    //     adult: true
+    // },
+    // bwzy: {
+    //     api: 'https://api.bwzym3u8.com',
+    //     name: '百萬資源',
+    //     adult: true
+    // },
+    // souav: {
+    //     api: 'https://api.souavzy.vip',
+    //     name: 'souav資源',
+    //     adult: true
+    // },
+    // r155: {
+    //     api: 'https://155api.com',
+    //     name: '155資源',
+    //     adult: true
+    // },
+    // lsb: {
+    //     api: 'https://apilsbzy1.com',
+    //     name: 'lsb資源',
+    //     adult: true
+    // },
+    // huangcang: {
+    //     api: 'https://hsckzy.vip',
+    //     name: '黃色倉庫',
+    //     adult: true,
+    //     detail: 'https://hsckzy.vip'
+    // },
+    // yutu: {
+    //     api: 'https://yutuzy10.com',
+    //     name: '玉兔資源',
+    //     adult: true
+    // },
+
+    // 下面是資源失效率高的API源，不建議使用
+    // subo: {
+    //     api: 'https://subocaiji.com/api.php/provide/vod',
+    //     name: '速播資源'
+    // },
+    // fczy: {
+    //     api: 'https://api.fczy888.me/api.php/provide/vod',
+    //     name: '蜂巢資源'
+    // },
+    // ukzy: {
+    //     api: 'https://api.ukuapi88.com/api.php/provide/vod',
+    //     name: 'U酷資源'
+    // },
     //ARCHIVE https://telegra.ph/APIs-08-12
 };
 

@@ -14,38 +14,29 @@ async function getPasswordHash() {
         return cachedPasswordHash;
     }
     
-    // 1. 优先从已存储的代理鉴权哈希获取
+    // 1. 優先從已存儲的代理鑑權哈希獲取
     const storedHash = localStorage.getItem('proxyAuthHash');
     if (storedHash) {
         cachedPasswordHash = storedHash;
         return storedHash;
     }
     
-    // 2. 尝试从密码验证状态获取（password.js 验证后存储的哈希）
-    const passwordVerified = localStorage.getItem('passwordVerified');
-    const storedPasswordHash = localStorage.getItem('passwordHash');
-    if (passwordVerified === 'true' && storedPasswordHash) {
-        localStorage.setItem('proxyAuthHash', storedPasswordHash);
-        cachedPasswordHash = storedPasswordHash;
-        return storedPasswordHash;
-    }
-    
-    // 3. 尝试从用户输入的密码生成哈希
-    const userPassword = localStorage.getItem('userPassword');
-    if (userPassword) {
-        try {
-            // 动态导入 sha256 函数
-            const { sha256 } = await import('./sha256.js');
-            const hash = await sha256(userPassword);
-            localStorage.setItem('proxyAuthHash', hash);
-            cachedPasswordHash = hash;
-            return hash;
-        } catch (error) {
-            console.error('生成密码哈希失败:', error);
+    // 2. 從 password.js 存儲的驗證狀態 JSON 中讀取 (key: 'passwordVerified', value: JSON{verified,timestamp,passwordHash})
+    try {
+        const passwordVerifiedRaw = localStorage.getItem('passwordVerified');
+        if (passwordVerifiedRaw) {
+            const parsed = JSON.parse(passwordVerifiedRaw);
+            if (parsed && parsed.passwordHash) {
+                localStorage.setItem('proxyAuthHash', parsed.passwordHash);
+                cachedPasswordHash = parsed.passwordHash;
+                return parsed.passwordHash;
+            }
         }
+    } catch (e) {
+        // 舊版本可能只是字串 'true'，忽略解析錯誤
     }
     
-    // 4. 如果用户没有设置密码，尝试使用环境变量中的密码哈希
+    // 3. 直接使用頁面注入的環境變量密碼哈希（不需登入的情況下也能代理）
     if (window.__ENV__ && window.__ENV__.PASSWORD) {
         cachedPasswordHash = window.__ENV__.PASSWORD;
         return window.__ENV__.PASSWORD;
@@ -53,6 +44,7 @@ async function getPasswordHash() {
     
     return null;
 }
+
 
 /**
  * 为代理请求URL添加鉴权参数

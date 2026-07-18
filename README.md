@@ -17,55 +17,31 @@ LibreTV 是一個輕量級、免費的在線視頻搜索與觀看平臺，提供
   <img src="https://github.com/user-attachments/assets/df485345-e83b-4564-adf7-0680be92d3c7" alt="項目截圖" style="max-width:600px">
 </details>
 
-## 🚀 快速部署
+## 🥇 感謝贊助
 
-選擇以下任一平臺，點擊一鍵部署按鈕，即可快速創建自己的 LibreTV 實例：
+- **[YXVM](https://yxvm.com)**  
+- **[ZMTO/VTEXS](https://zmto.com)**
+- **[Sharon](https://sharon.io)**
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLibreSpark%2FLibreTV)  
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LibreSpark/LibreTV)  
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/LibreSpark/LibreTV)
+## 🚀 快速部署 (推薦 Cloudflare Pages)
 
-## 🚨 重要声明
-
-- 本项目仅供学习和个人使用，为避免版权纠纷，必须设置PASSWORD环境变量
-- 请勿将部署的实例用于商业用途或公开服务
-- 如因公开分享导致的任何法律问题，用户需自行承担责任
-- 项目开发者不对用户的使用行为承担任何法律责任
-
-## ⚠️ 同步与升级
-
-Pull Bot 會反覆觸發無效的 PR 和垃圾郵件，嚴重干擾項目維護。作者可能會直接拉黑所有 Pull Bot 自動發起的同步請求的倉庫所有者。
-
-**推薦做法：**
-
-建議在 fork 的倉庫中啟用本倉庫自帶的 GitHub Actions 自動同步功能（見 `.github/workflows/sync.yml`）。 
-
-如需手動同步主倉庫更新，也可以使用 GitHub 官方的 [Sync fork](https://docs.github.com/cn/github/collaborating-with-issues-and-pull-requests/syncing-a-fork) 功能。
-
-对于更新后可能会出现的错误和异常，在设置中备份配置后，首先清除页面Cookie，然后 Ctrl + F5 刷新页面。再次访问网页检查是否解决问题。
-
+LibreTV 推薦使用 **Cloudflare Pages** 進行部署，免費、無限頻寬且防盜鏈圖片與影片加載體驗最佳。
 
 ## 📋 詳細部署指南
 
-### Cloudflare Pages
+### Cloudflare Pages (推薦)
 
-1. Fork 或克隆本仓库到您的 GitHub 账户
-2. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)，进入 Pages 服务
-3. 点击"创建项目"，连接您的 GitHub 仓库
-4. 使用以下设置：
-   - 构建命令：留空（无需构建）
-   - 输出目录：留空（默认为根目录）
-5. **⚠️ 重要：在"设置" > "环境变量"中添加 `PASSWORD` 变量（必须设置）**
-6. 点击"保存并部署"
+1. Fork 或克隆本倉庫到您的 GitHub 賬戶
+2. 登錄 [Cloudflare Dashboard](https://dash.cloudflare.com/)，進入 Pages 服務
+3. 點擊"創建項目"，連接您的 GitHub 倉庫
+4. 使用以下設置：
+   - 構建命令：留空（無需構建）
+   - 輸出目錄：`.`（根目錄）
+5. 點擊"保存並部署"！
 
-### Vercel
+6. 部署成功後即可訪問您的 LibreTV 實例
 
-1. Fork 或克隆本仓库到您的 GitHub/GitLab 账户
-2. 登录 [Vercel](https://vercel.com/)，点击"New Project"
-3. 导入您的仓库，使用默认设置
-4. **⚠️ 重要：在"Settings" > "Environment Variables"中添加 `PASSWORD` 变量（必须设置）**
-5. 点击"Deploy"
-
+> 如需啟用密碼保護，可在 Render 控制臺的環境變量中手動添加 `PASSWORD` 和/或 `ADMINPASSWORD`。
 
 ### Docker
 ```
@@ -89,7 +65,8 @@ services:
     ports:
       - "8899:8080" # 將內部 8080 端口映射到主機的 8899 端口
     environment:
-      - PASSWORD=${PASSWORD:-111111} # 可将 111111 修改为你想要的密码，默认为 your_password
+      - PASSWORD=${PASSWORD:-your_password} # 可將 your_password 修改為你想要的密碼，默認為 your_password
+      - ADMINPASSWORD=${PASSWORD:-your_adminpassword} # 可將 your_adminpassword 修改為你想要的密碼，默認為 your_adminpassword
     restart: unless-stopped
 ```
 啟動 LibreTV：
@@ -122,8 +99,22 @@ npm run dev
 
 ### 密碼保護
 
-**重要提示**: 为确保安全，所有部署都必须设置 PASSWORD 环境变量，否则用户将看到设置密码的提示。
+要為您的 LibreTV 實例添加密碼保護，可以在部署平臺上設置環境變量：
 
+**環境變量名**: `PASSWORD`  
+**值**: 您想設置的密碼
+
+**環境變量名**: `ADMINPASSWORD`  
+**值**: 您想設置的管理員密碼
+
+各平臺設置方法：
+
+- **Cloudflare Pages**: Dashboard > 您的項目 > 設置 > 環境變量
+- **Vercel**: Dashboard > 您的項目 > Settings > Environment Variables
+- **Netlify**: Dashboard > 您的項目 > Site settings > Build & deploy > Environment
+- **Docker**: 修改 `docker run` 中 `your_password` 為你的密碼
+- **Docker Compose**: 修改 `docker-compose.yml` 中的 `your_password` 為你的密碼
+- **本地開發**: SET PASSWORD=your_password
 
 ### API兼容性
 
@@ -162,15 +153,19 @@ LibreTV 僅作為視頻搜索工具，不存儲、上傳或分發任何視頻內
 
 本項目開發者不對使用本項目產生的任何後果負責。使用本項目時，您必須遵守當地的法律法規。
 
-## 🤝 衍生项目
+## 🤝 衍生項目
 
-它们提供了更多丰富的自定义功能，欢迎体验~
+它們提供了更多豐富的自定義功能，歡迎體驗~
 
 - **[MoonTV](https://github.com/senshinya/MoonTV)**  
 - **[OrionTV](https://github.com/zimplexing/OrionTV)**  
 
-## 🥇 感谢支持
+## 🎉 貢獻者福利
 
-- **[Sharon](https://sharon.io)**
-- **[ZMTO](https://zmto.com)**
-- **[YXVM](https://yxvm.com)**  
+活躍貢獻者可以在 [Issue #268](https://github.com/LibreSpark/LibreTV/issues/268) 中留言，申請免費上車 1Password Team，享受團隊協作工具的便利！
+
+## 💝 支持項目
+
+如果您想支持本項目，可以考慮進行捐款：
+
+[![捐贈](https://img.shields.io/badge/愛心捐贈-無國界醫生-1a85ff?style=for-the-badge&logo=medical-cross)](https://www.msf.hk/zh-hant/donate/general?type=one-off)
