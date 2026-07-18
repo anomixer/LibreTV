@@ -1,11 +1,21 @@
 // UI相關函數
 function toggleSettings(e) {
-    // 密碼保護校驗
-    if (window.isPasswordProtected && window.isPasswordVerified) {
-        if (window.isPasswordProtected() && !window.isPasswordVerified()) {
-            showPasswordModal && showPasswordModal();
-            return;
+    // 强化的密码保护校验 - 防止绕过
+    try {
+        if (window.ensurePasswordProtection) {
+            window.ensurePasswordProtection();
+        } else {
+            // 兼容性检查
+            if (window.isPasswordProtected && window.isPasswordVerified) {
+                if (window.isPasswordProtected() && !window.isPasswordVerified()) {
+                    showPasswordModal && showPasswordModal();
+                    return;
+                }
+            }
         }
+    } catch (error) {
+        console.warn('Password protection check failed:', error.message);
+        return;
     }
     // 阻止事件冒泡，防止觸發document的點擊事件
     e && e.stopPropagation();

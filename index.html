@@ -208,8 +208,8 @@
                         <!-- 搜索輸入 -->
                         <input type="text" 
                                id="searchInput" 
-                               class="flex-1 bg-[#111] border-y border-[#333] text-white px-6 py-0 focus:outline-none transition-colors" 
-                               placeholder="搜索你喜歡的視頻..." 
+                               class="flex-1 bg-[#111] border-y border-[#333] text-white px-6 py-0 focus:outline-none transition-colors min-w-0" 
+                               placeholder="搜索你喜欢的视频..." 
                                autocomplete="off"
                                aria-label="視頻搜索框"
                                oninput="toggleClearButton()">
@@ -414,6 +414,7 @@
         window._jsSha256 = window.sha256;
     </script>
     <script src="js/config.js"></script>
+    <script src="js/proxy-auth.js"></script>
     <script src="js/customer_site.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/api.js"></script>
@@ -433,7 +434,6 @@
         // 注入服務器端環境變量 (將由服務器端替換)
         // PASSWORD 變量將在這裡被服務器端注入
         window.__ENV__.PASSWORD = "{{PASSWORD}}";
-        window.__ENV__.ADMINPASSWORD = "{{ADMINPASSWORD}}";
     </script>
 
     <!-- 版本檢測腳本 -->

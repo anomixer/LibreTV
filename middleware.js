@@ -30,23 +30,12 @@ export default async function middleware(request) {
   if (password) {
     passwordHash = await sha256(password);
   }
-
-  const adminpassword = process.env.ADMINPASSWORD || '';
-  let adminpasswordHash = '';
-  if (adminpassword) {
-    adminpasswordHash = await sha256(adminpassword); // 修復變量名
-  }
   
-  // 合併兩次替換為一次操作
-  let modifiedHtml = originalHtml
-    .replace(
-      'window.__ENV__.PASSWORD = "{{PASSWORD}}";',
-      `window.__ENV__.PASSWORD = "${passwordHash}"; // SHA-256 hash`
-    )
-    .replace(
-      'window.__ENV__.ADMINPASSWORD = "{{ADMINPASSWORD}}";',
-      `window.__ENV__.ADMINPASSWORD = "${adminpasswordHash}"; // SHA-256 hash`
-    );
+  // 替换密码占位符
+  let modifiedHtml = originalHtml.replace(
+    'window.__ENV__.PASSWORD = "{{PASSWORD}}";',
+    `window.__ENV__.PASSWORD = "${passwordHash}"; // SHA-256 hash`
+  );
 
   // 修復Response構造
   return new Response(modifiedHtml, {

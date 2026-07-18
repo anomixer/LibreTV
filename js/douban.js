@@ -1,7 +1,7 @@
 // 豆瓣熱門電影電視劇推薦功能
 
-// 豆瓣標籤列表 - 修改為默認標籤
-let defaultMovieTags = ['热门', '最新', '經典', '豆瓣高分', '冷门佳片', '華語', '歐美', '韓國', '日本', '動作', '喜劇', '愛情', '科幻', '懸疑', '恐怖', '治癒'];
+// 豆瓣标签列表 - 修改为默认标签
+let defaultMovieTags = ['热门', '最新', '经典', '豆瓣高分', '冷门佳片', '华语', '欧美', '韩国', '日本', '动作', '喜剧', '日综', '爱情', '科幻', '悬疑', '恐怖', '治愈'];
 let defaultTvTags = ['热门', '美剧', '英剧', '韩剧', '日剧', '国产剧', '港剧', '日本动画', '综艺', '纪录片'];
 
 // 用戶標籤列表 - 存儲用戶實際使用的標籤（包含保留的系統標籤和用戶添加的自定義標籤）
@@ -457,8 +457,13 @@ async function fetchDoubanData(url) {
     };
 
     try {
-        // 嘗試直接訪問（豆瓣API可能允許部分CORS請求）
-        const response = await fetch(PROXY_URL + encodeURIComponent(url), fetchOptions);
+        // 添加鉴权参数到代理URL
+        const proxiedUrl = await window.ProxyAuth?.addAuthToProxyUrl ? 
+            await window.ProxyAuth.addAuthToProxyUrl(PROXY_URL + encodeURIComponent(url)) :
+            PROXY_URL + encodeURIComponent(url);
+            
+        // 尝试直接访问（豆瓣API可能允许部分CORS请求）
+        const response = await fetch(proxiedUrl, fetchOptions);
         clearTimeout(timeoutId);
         
         if (!response.ok) {

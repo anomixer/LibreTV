@@ -5,38 +5,54 @@
  * 通過讀取頁面上嵌入的環境變量來檢查
  */
 function isPasswordProtected() {
-    // 檢查頁面上嵌入的環境變量
+    // 只检查普通密码
     const pwd = window.__ENV__ && window.__ENV__.PASSWORD;
-    const adminPwd = window.__ENV__ && window.__ENV__.ADMINPASSWORD;
+    
+    // 检查普通密码是否有效
+    return typeof pwd === 'string' && pwd.length === 64 && !/^0+$/.test(pwd);
+}
 
-    // 檢查普通密碼或管理員密碼是否有效
-    const isPwdValid = typeof pwd === 'string' && pwd.length === 64 && !/^0+$/.test(pwd);
-    const isAdminPwdValid = typeof adminPwd === 'string' && adminPwd.length === 64 && !/^0+$/.test(adminPwd);
+/**
+ * 检查是否强制要求设置密码
+ * 如果没有设置有效的 PASSWORD，则认为需要强制设置密码
+ * 为了安全考虑，所有部署都必须设置密码
+ */
+function isPasswordRequired() {
+    return !isPasswordProtected();
+}
 
-    // 任意一個密碼有效即認為啟用了密碼保護
-    return isPwdValid || isAdminPwdValid;
+/**
+ * 强制密码保护检查 - 防止绕过
+ * 在关键操作前都应该调用此函数
+ */
+function ensurePasswordProtection() {
+    if (isPasswordRequired()) {
+        showPasswordModal();
+        throw new Error('Password protection is required');
+    }
+    if (isPasswordProtected() && !isPasswordVerified()) {
+        showPasswordModal();
+        throw new Error('Password verification required');
+    }
+    return true;
 }
 
 window.isPasswordProtected = isPasswordProtected;
+window.isPasswordRequired = isPasswordRequired;
 
 /**
  * 驗證用戶輸入的密碼是否正確（異步，使用SHA-256哈希）
  */
-// 統一驗證函數
-async function verifyPassword(password, passwordType = 'PASSWORD') {
+async function verifyPassword(password) {
     try {
-        const correctHash = window.__ENV__?.[passwordType];
+        const correctHash = window.__ENV__?.PASSWORD;
         if (!correctHash) return false;
 
         const inputHash = await sha256(password);
         const isValid = inputHash === correctHash;
 
         if (isValid) {
-            const storageKey = passwordType === 'PASSWORD'
-                ? PASSWORD_CONFIG.localStorageKey
-                : PASSWORD_CONFIG.adminLocalStorageKey;
-
-            localStorage.setItem(storageKey, JSON.stringify({
+            localStorage.setItem(PASSWORD_CONFIG.localStorageKey, JSON.stringify({
                 verified: true,
                 timestamp: Date.now(),
                 passwordHash: correctHash
@@ -44,39 +60,36 @@ async function verifyPassword(password, passwordType = 'PASSWORD') {
         }
         return isValid;
     } catch (error) {
-        console.error(`驗證${passwordType}密碼時出錯:`, error);
+        console.error('验证密码时出错:', error);
         return false;
     }
 }
 
-// 統一驗證狀態檢查
-function isVerified(passwordType = 'PASSWORD') {
+// 验证状态检查
+function isPasswordVerified() {
     try {
         if (!isPasswordProtected()) return true;
 
-        const storageKey = passwordType === 'PASSWORD'
-            ? PASSWORD_CONFIG.localStorageKey
-            : PASSWORD_CONFIG.adminLocalStorageKey;
-
-        const stored = localStorage.getItem(storageKey);
+        const stored = localStorage.getItem(PASSWORD_CONFIG.localStorageKey);
         if (!stored) return false;
 
         const { timestamp, passwordHash } = JSON.parse(stored);
-        const currentHash = window.__ENV__?.[passwordType];
+        const currentHash = window.__ENV__?.PASSWORD;
 
         return timestamp && passwordHash === currentHash &&
             Date.now() - timestamp < PASSWORD_CONFIG.verificationTTL;
     } catch (error) {
-        console.error(`檢查${passwordType}驗證狀態時出錯:`, error);
+        console.error('检查密码验证状态时出错:', error);
         return false;
     }
 }
 
 // 更新全局導出
 window.isPasswordProtected = isPasswordProtected;
-window.isPasswordVerified = () => isVerified('PASSWORD');
-window.isAdminVerified = () => isVerified('ADMINPASSWORD');
+window.isPasswordRequired = isPasswordRequired;
+window.isPasswordVerified = isPasswordVerified;
 window.verifyPassword = verifyPassword;
+window.ensurePasswordProtection = ensurePasswordProtection;
 
 // SHA-256實現，可用Web Crypto API
 async function sha256(message) {
@@ -103,15 +116,46 @@ function showPasswordModal() {
         document.getElementById('doubanArea').classList.add('hidden');
         document.getElementById('passwordCancelBtn').classList.add('hidden');
 
+        // 检查是否需要强制设置密码
+        if (isPasswordRequired()) {
+            // 修改弹窗内容提示用户需要先设置密码
+            const title = passwordModal.querySelector('h2');
+            const description = passwordModal.querySelector('p');
+            if (title) title.textContent = '需要设置密码';
+            if (description) description.textContent = '请先在部署平台设置 PASSWORD 环境变量来保护您的实例';
+            
+            // 隐藏密码输入框和提交按钮，只显示提示信息
+            const form = passwordModal.querySelector('form');
+            const errorMsg = document.getElementById('passwordError');
+            if (form) form.style.display = 'none';
+            if (errorMsg) {
+                errorMsg.textContent = '为确保安全，必须设置 PASSWORD 环境变量才能使用本服务，请联系管理员进行配置';
+                errorMsg.classList.remove('hidden');
+                errorMsg.className = 'text-red-500 mt-2 font-medium'; // 改为更醒目的红色
+            }
+        } else {
+            // 正常的密码验证模式
+            const title = passwordModal.querySelector('h2');
+            const description = passwordModal.querySelector('p');
+            if (title) title.textContent = '访问验证';
+            if (description) description.textContent = '请输入密码继续访问';
+            
+            const form = passwordModal.querySelector('form');
+            if (form) form.style.display = 'block';
+        }
+
         passwordModal.style.display = 'flex';
 
-        // 確保輸入框獲取焦點
-        setTimeout(() => {
-            const passwordInput = document.getElementById('passwordInput');
-            if (passwordInput) {
-                passwordInput.focus();
-            }
-        }, 100);
+        // 只有在非强制设置密码模式下才聚焦输入框
+        if (!isPasswordRequired()) {
+            // 确保输入框获取焦点
+            setTimeout(() => {
+                const passwordInput = document.getElementById('passwordInput');
+                if (passwordInput) {
+                    passwordInput.focus();
+                }
+            }, 100);
+        }
     }
 }
 
@@ -179,69 +223,19 @@ async function handlePasswordSubmit() {
 }
 
 /**
- * 初始化密碼驗證系統（需適配異步事件）
+ * 初始化密码验证系统
  */
-// 修改initPasswordProtection函數
 function initPasswordProtection() {
-    if (!isPasswordProtected()) {
+    // 如果需要强制设置密码，显示警告弹窗
+    if (isPasswordRequired()) {
+        showPasswordModal();
         return;
     }
     
-    // 檢查是否有普通密碼
-    const hasNormalPassword = window.__ENV__?.PASSWORD && 
-                           window.__ENV__.PASSWORD.length === 64 && 
-                           !/^0+$/.test(window.__ENV__.PASSWORD);
-    
-    // 只有當設置了普通密碼且未驗證時才顯示密碼框
-    if (hasNormalPassword && !isPasswordVerified()) {
+    // 如果设置了密码但用户未验证，显示密码输入框
+    if (isPasswordProtected() && !isPasswordVerified()) {
         showPasswordModal();
-    }
-    
-    // 設置按鈕事件監聽
-    const settingsBtn = document.querySelector('[onclick="toggleSettings(event)"]');
-    if (settingsBtn) {
-        settingsBtn.addEventListener('click', function(e) {
-            // 只有當設置了普通密碼且未驗證時才攔截點擊
-            if (hasNormalPassword && !isPasswordVerified()) {
-                e.preventDefault();
-                e.stopPropagation();
-                showPasswordModal();
-                return;
-            }
-            
-        });
-    }
-}
-
-// 設置按鈕密碼框驗證
-function showAdminPasswordModal() {
-    const passwordModal = document.getElementById('passwordModal');
-    if (!passwordModal) return;
-
-    // 清空密碼輸入框
-    const passwordInput = document.getElementById('passwordInput');
-    if (passwordInput) passwordInput.value = '';
-
-    // 修改標題為管理員驗證
-    const title = passwordModal.querySelector('h2');
-    if (title) title.textContent = '管理員驗證';
-
-    document.getElementById('passwordCancelBtn').classList.remove('hidden');
-    passwordModal.style.display = 'flex';
-
-    // 設置表單提交處理
-    const form = document.getElementById('passwordForm');
-    if (form) {
-        form.onsubmit = async function (e) {
-            e.preventDefault();
-            const password = document.getElementById('passwordInput').value.trim();
-            if (await verifyPassword(password, 'ADMINPASSWORD')) {
-                passwordModal.style.display = 'none';
-                document.getElementById('settingsPanel').classList.add('show');
-            } else {
-                showPasswordError();
-            }
-        };
+        return;
     }
 }
 
@@ -249,5 +243,3 @@ function showAdminPasswordModal() {
 document.addEventListener('DOMContentLoaded', function () {
     initPasswordProtection();
 });
-
-
