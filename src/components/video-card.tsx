@@ -5,6 +5,7 @@ import type { SearchResultItem } from '@/lib/types';
 import { buildImageUrl } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { useCC } from '@/lib/use-cc';
 
 // —— 跨源同名聚合 ——
 
@@ -71,6 +72,7 @@ export function AggregatedCard({
   group: AggregatedGroup;
   onOpen: (item: SearchResultItem) => void;
 }) {
+  const cc = useCC();
   const imageProxyMode = useAppStore((s) => s.imageProxyMode);
   const customImageProxy = useAppStore((s) => s.customImageProxy);
   const [imgFailed, setImgFailed] = useState(false);
@@ -116,7 +118,7 @@ export function AggregatedCard({
             <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent" />
             {multi && (
               <span className="absolute top-1.5 left-1.5 tag bg-black/70 text-accent font-medium">
-                {group.items.length} 源
+                {group.items.length} {cc('源')}
               </span>
             )}
           </div>
@@ -127,7 +129,7 @@ export function AggregatedCard({
             </svg>
             {multi && (
               <span className="absolute top-1.5 left-1.5 tag bg-black/70 text-accent font-medium">
-                {group.items.length} 源
+                {group.items.length} {cc('源')}
               </span>
             )}
           </div>
@@ -143,11 +145,11 @@ export function AggregatedCard({
               {group.year && <span className="tag bg-purple-500/15 text-purple-600 dark:text-purple-300">{group.year}</span>}
               {adult && <span className="tag bg-pink-500/15 text-pink-600 dark:text-pink-400">(18+)</span>}
             </div>
-            <p className="text-xs text-muted line-clamp-2 mb-2">{group.remarks || '暂无介绍'}</p>
+            <p className="text-xs text-muted line-clamp-2 mb-2">{cc(group.remarks || '暂无介绍')}</p>
           </div>
           <div className="flex items-center justify-between mt-auto pt-1.5 border-t border-line">
             <span className="tag bg-chip text-muted truncate max-w-[80%]">
-              {multi ? `${group.items.length} 个来源` : group.items[0].sourceName}
+              {multi ? `${group.items.length} ${cc('个来源')}` : group.items[0].sourceName}
             </span>
             {multi && (
               <svg
@@ -166,7 +168,7 @@ export function AggregatedCard({
 
       {multi && expanded && (
         <div className="border-t border-line p-2.5 animate-fade-in">
-          <p className="text-[10px] text-faint mb-1.5">选择来源播放</p>
+          <p className="text-[10px] text-faint mb-1.5">{cc('选择来源播放')}</p>
           <div className="flex flex-wrap gap-1.5">
             {group.items.map((item) => (
               <button
@@ -181,10 +183,10 @@ export function AggregatedCard({
                   e.stopPropagation();
                   onOpen(item);
                 }}
-                aria-label={`使用 ${item.sourceName} 播放`}
+                aria-label={cc(`使用 ${item.sourceName} 播放`)}
               >
                 <span className="font-medium text-content truncate max-w-[9em]">{item.sourceName}</span>
-                <span className="text-faint truncate max-w-[7em]">{item.remarks || '暂无介绍'}</span>
+                <span className="text-faint truncate max-w-[7em]">{cc(item.remarks || '暂无介绍')}</span>
                 <svg
                   className="w-3.5 h-3.5 text-accent shrink-0 transition-transform group-hover:scale-110"
                   fill="currentColor"

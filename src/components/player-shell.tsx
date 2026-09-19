@@ -5,6 +5,7 @@ import Artplayer from 'artplayer';
 import Hls, { type HlsConfig } from 'hls.js';
 import { filterAdsFromM3u8 } from '@/lib/m3u8';
 import { formatTime } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 /**
  * 播放器外壳：ArtPlayer + hls.js（旧版 player.js 的 React 化）。
@@ -57,6 +58,7 @@ export function PlayerShell({
   onEnded,
   onPause,
 }: PlayerShellProps) {
+  const t = useTranslations('player');
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const artRef = useRef<any>(null);
@@ -136,7 +138,7 @@ export function PlayerShell({
                 !mediaUrl.startsWith('/api/proxy/') &&
                 (errorCount >= 2 || data.details === 'manifestLoadError')
               ) {
-                showHint('直连失败，改用代理重试...');
+                showHint(t('proxyRetry'));
                 setupHls(video, `/api/proxy/${encodeURIComponent(mediaUrl)}`, false);
                 return;
               }
@@ -147,7 +149,7 @@ export function PlayerShell({
               break;
             default:
               if (errorCount > 3) {
-                setError('视频加载失败，可能是格式不兼容或源不可用，请尝试其他视频源');
+                setError(t('loadFailed'));
               }
           }
         }
@@ -199,7 +201,7 @@ export function PlayerShell({
         const duration = art.duration || 0;
         if (saved > 10 && duration > 0 && saved < duration - 2) {
           art.currentTime = saved;
-          showHint(`已从 ${formatTime(saved)} 继续播放`);
+          showHint(t('resumeHint', { time: formatTime(saved) }));
         }
       };
       restore();
@@ -211,7 +213,7 @@ export function PlayerShell({
       setError('');
     });
     art.on('video:error', () => {
-      setError('视频播放失败，请尝试其他视频源');
+      setError(t('playFailed'));
     });
     art.on('video:timeupdate', () => {
       const now = Date.now();
@@ -239,19 +241,19 @@ export function PlayerShell({
       if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); return; }
       switch (e.key) {
         case 'ArrowLeft':
-          if (current.currentTime > 5) { current.currentTime -= 5; showHint('快退 5s'); e.preventDefault(); }
+          if (current.currentTime > 5) { current.currentTime -= 5; showHint(t('rewind5')); e.preventDefault(); }
           break;
         case 'ArrowRight':
-          if (current.duration - current.currentTime > 5) { current.currentTime += 5; showHint('快进 5s'); e.preventDefault(); }
+          if (current.duration - current.currentTime > 5) { current.currentTime += 5; showHint(t('forward5')); e.preventDefault(); }
           break;
         case 'ArrowUp':
-          if (current.volume < 1) { current.volume = Math.min(1, current.volume + 0.1); showHint(`音量 ${Math.round(current.volume * 100)}%`); e.preventDefault(); }
+          if (current.volume < 1) { current.volume = Math.min(1, current.volume + 0.1); showHint(t('volumeHint', { pct: Math.round(current.volume * 100) })); e.preventDefault(); }
           break;
         case 'ArrowDown':
-          if (current.volume > 0) { current.volume = Math.max(0, current.volume - 0.1); showHint(`音量 ${Math.round(current.volume * 100)}%`); e.preventDefault(); }
+          if (current.volume > 0) { current.volume = Math.max(0, current.volume - 0.1); showHint(t('volumeHint', { pct: Math.round(current.volume * 100) })); e.preventDefault(); }
           break;
         case ' ':
-          current.toggle(); showHint('播放/暂停'); e.preventDefault();
+          current.toggle(); showHint(t('playPause')); e.preventDefault();
           break;
         case 'f': case 'F':
           current.fullscreen = !current.fullscreen; e.preventDefault();
@@ -273,7 +275,7 @@ export function PlayerShell({
         if (art.video?.paused) return;
         art.video.playbackRate = 3.0;
         isLongPress = true;
-        showHint('3 倍速');
+        showHint(t('tripleSpeed'));
         e.preventDefault();
       }, 500);
     };
@@ -282,7 +284,7 @@ export function PlayerShell({
       if (isLongPress) {
         art.video.playbackRate = originalRate;
         isLongPress = false;
-        showHint(`${originalRate} 倍速`);
+        showHint(t('rateHint', { rate: originalRate }));
       }
     };
     const onTouchMove = (e: TouchEvent) => {
@@ -325,7 +327,7 @@ export function PlayerShell({
       artRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, adFilter]);
+  }, [url, adFilter, t]);
 
   return (
     <div className="relative w-full h-full">
@@ -345,7 +347,7 @@ export function PlayerShell({
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/80">
           <p className="text-danger text-sm">{error}</p>
           <button className="btn-ghost text-xs" onClick={() => location.reload()}>
-            重新加载
+            {t('reload')}
           </button>
         </div>
       )}
@@ -356,7 +358,7 @@ export function PlayerShell({
       )}
       {autoplayNext && !error && (
         <div className="absolute bottom-16 right-3 text-[10px] text-muted bg-black/50 px-2 py-0.5 rounded pointer-events-none">
-          自动连播已开启
+          {t('autoplayOn')}
         </div>
       )}
     </div>

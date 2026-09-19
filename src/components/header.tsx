@@ -3,17 +3,43 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { ThemeToggle } from './theme';
 import { SourceManagerDrawer } from './source-manager';
 import { HistoryPanel } from './history-panel';
 import { Icon } from './icon';
 import { SearchHistoryDropdown, useSearchHistory } from './search-history';
 import { cn } from '@/lib/utils';
+import { t2s } from '@/lib/opencc';
+
+/** 简/繁切换按钮：仅改 NEXT_LOCALE cookie 后整页刷新（localePrefix 'never'，URL 不变） */
+function LanguageToggle() {
+  const locale = useLocale();
+  const isZhCN = locale === 'zh-CN';
+  const nextLocale = isZhCN ? 'zh-TW' : 'zh-CN';
+  const toggle = () => {
+    document.cookie = `NEXT_LOCALE=${nextLocale}; path=/; max-age=31536000; samesite=lax`;
+    window.location.reload();
+  };
+  const label = isZhCN ? '切换到繁体中文' : '切換到簡體中文';
+  return (
+    <button
+      className="p-2 rounded-md text-muted hover:text-content hover:bg-hover transition-colors text-xs font-medium"
+      title={label}
+      aria-label={label}
+      suppressHydrationWarning
+      onClick={toggle}
+    >
+      {isZhCN ? '繁' : '簡'}
+    </button>
+  );
+}
 
 /** 顶部导航：Logo、搜索框（首页外）、历史、设置 */
 export function Header({ showSearch = false }: { showSearch?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
+  const t = useTranslations('header');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -21,8 +47,9 @@ export function Header({ showSearch = false }: { showSearch?: boolean }) {
   const searchHistory = useSearchHistory(query);
 
   const submitSearch = (text: string) => {
-    const q = text.trim().slice(0, 100);
+    const q = t2s(text.trim()).slice(0, 100);
     if (!q) return;
+    setQuery(q);
     searchHistory.close();
     router.push(`/?s=${encodeURIComponent(q)}`, { scroll: false });
     // 顶栏搜索一并写入最近搜索（此前只有首页会记录）
@@ -30,15 +57,16 @@ export function Header({ showSearch = false }: { showSearch?: boolean }) {
   };
 
   const pickHistory = (text: string) => {
-    setQuery(text);
-    submitSearch(text);
+    const q = t2s(text);
+    setQuery(q);
+    submitSearch(q);
   };
 
   return (
     <>
       <header className="sticky top-0 z-40 bg-surface/90 backdrop-blur border-b border-line">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
-          <Link href="/" aria-label="LibreTV 首页" className="flex items-center shrink-0">
+          <Link href="/" aria-label={t('homeAria')} className="flex items-center shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icons/icon-512.png" alt="LibreTV" className="w-7 h-7 rounded-lg" />
           </Link>
@@ -54,13 +82,14 @@ export function Header({ showSearch = false }: { showSearch?: boolean }) {
               <div ref={searchHistory.containerRef} className="relative">
                 <input
                   className={cn(
-                    'input w-full h-9',
+                    'input w-full h-9 notranslate',
                     // 展开时：上圆角与外框沿用聚焦样式，底边改为内部分隔线，与下拉拼成同一面板
                     searchHistory.visible &&
                       'rounded-b-none border-accent border-b-line bg-surface-raised focus-visible:ring-0'
                   )}
-                  aria-label="搜索影片"
-                  placeholder="搜索影片..."
+                  data-no-tw="true"
+                  aria-label={t('searchPlaceholder')}
+                  placeholder={t('searchPlaceholder')}
                   value={query}
                   maxLength={100}
                   onChange={(e) => {
@@ -97,16 +126,17 @@ export function Header({ showSearch = false }: { showSearch?: boolean }) {
 
           <nav className="flex items-center gap-1 ml-auto">
             <HeaderLink href="/live" active={pathname === '/live'}>
-              直播
+              {t('live')}
             </HeaderLink>
             <HeaderLink href="/about" active={pathname === '/about'}>
-              关于
+              {t('about')}
             </HeaderLink>
+            <LanguageToggle />
             <ThemeToggle />
-            <IconButton label="观看历史" onClick={() => setHistoryOpen(true)}>
+            <IconButton label={t('history')} onClick={() => setHistoryOpen(true)}>
               <Icon name="clock" />
             </IconButton>
-            <IconButton label="设置" onClick={() => setSettingsOpen(true)}>
+            <IconButton label={t('settings')} onClick={() => setSettingsOpen(true)}>
               <Icon name="gear" />
             </IconButton>
           </nav>
@@ -145,3 +175,4 @@ function IconButton({ label, onClick, children }: { label: string; onClick: () =
     </button>
   );
 }
+

@@ -1,6 +1,7 @@
 'use client';
 
 import type { SearchResponse, SearchStreamEvent, SourceSearchOutcome, VideoDetail, DoubanResponse, BangumiCalendarResponse, AuthStatusResponse, SourceConfig, SearchResultItem, LivePlaylistResponse, LiveEpgResponse, SourceListPayload } from './types';
+import { isZhTW, convertDataToTW, t2s } from './opencc';
 
 /**
  * 客户端 API 封装。401 时触发全局事件打开登录框，
@@ -102,7 +103,8 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     } catch { /* 忽略解析失败 */ }
     throw new ApiError(msg, res.status);
   }
-  return (await res.json()) as T;
+  const json = (await res.json()) as T;
+  return isZhTW() ? convertDataToTW(json) : json;
 }
 
 export const api = {
@@ -128,17 +130,18 @@ export const api = {
     filterAdult: boolean,
     opts?: { signal?: AbortSignal; onSource?: (outcome: SourceSearchOutcome) => void }
   ): Promise<SearchResponse> => {
+    const simplifiedWd = t2s(wd);
     const signal = opts?.signal;
     const onSource = opts?.onSource;
     if (!onSource) {
       return request<SearchResponse>('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wd, sources, filterAdult }),
+        body: JSON.stringify({ wd: simplifiedWd, sources, filterAdult }),
         signal,
       });
     }
-    return searchStream(wd, sources, filterAdult, onSource, signal);
+    return searchStream(simplifiedWd, sources, filterAdult, onSource, signal);
   },
 
   detail: (id: string, source: SourceConfig, signal?: AbortSignal) => {
@@ -291,9 +294,10 @@ async function searchStream(
     let final: SearchResponse = { list: [], failures: [] };
     await consumeNdjson<SearchStreamEvent>(res, (event) => {
       if (event.type === 'source') {
-        onSource(event);
+        onSource(isZhTW() ? convertDataToTW(event) : event);
       } else if (event.type === 'done') {
-        final = { list: event.list, failures: event.failures };
+        const payload: SearchResponse = { list: event.list, failures: event.failures };
+        final = isZhTW() ? convertDataToTW(payload) : payload;
       }
     });
     return final;

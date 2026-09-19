@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/components/auth';
+import { useCC } from '@/lib/use-cc';
 
 /** 上游仓库最新 tag（即最新版本号），用于页脚的更新检测 */
 const UPSTREAM_TAGS_API = 'https://api.github.com/repos/LibreSpark/LibreTV/tags?per_page=1';
@@ -69,17 +70,18 @@ function useUpstreamUpdate(current: string | null): UpstreamUpdate | null {
 
 /** 页脚仓库链接上的悬停提示：显示更新检测结果 */
 function UpdateTip({ update }: { update: UpstreamUpdate | null }) {
+  const cc = useCC();
   const tip =
     update === null
       ? null
       : update.status === 'newer'
-        ? `发现新版本 v${update.latest}`
+        ? cc(`发现新版本 v${update.latest}`)
         : update.status === 'latest'
-          ? '已是最新版本'
-          : '正在检测更新…';
+          ? cc('已是最新版本')
+          : cc('正在检测更新…');
   if (!tip) return null;
   return (
-    <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-line bg-chip px-2 py-1 text-faint shadow-sm group-hover:block">
+    <span suppressHydrationWarning className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-line bg-chip px-2 py-1 text-faint shadow-sm group-hover:block">
       {tip}
     </span>
   );
