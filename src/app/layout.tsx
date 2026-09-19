@@ -1,27 +1,45 @@
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
+import { NextIntlClientProvider } from 'next-intl';
 import './globals.css';
 import { Providers } from '@/components/providers';
+import { routing } from '@/i18n/routing';
+import zhCN from '../../messages/zh-CN.json';
+import zhTW from '../../messages/zh-TW.json';
 
-export const metadata: Metadata = {
-  title: {
-    default: 'LibreTV - 免费在线视频搜索与观看平台',
-    template: '%s - LibreTV',
-  },
-  description:
-    'LibreTV 是一个免费的在线视频搜索平台，无广告、安全，提供来自多个视频源的内容搜索与观看服务，无需注册即可使用。',
-  manifest: '/manifest.webmanifest',
-  // 图标与门户站（LibreTV-portal）同一套：同一张 artwork 导出的多尺寸 + 根目录 favicon.ico 兜底。
-  // 只声明单张 512 时，抓取端只能拿大图缩放，小尺寸下易糊、看起来「没填满」。
-  icons: {
-    icon: [
-      { url: '/favicon.ico', sizes: '48x48' },
-      { url: '/icons/icon-96.png', sizes: '96x96', type: 'image/png' },
-      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-    ],
-    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
-  },
-};
+/** locale -> messages 的静态映射，避免根 layout 动态 import 的类型负担 */
+const messagesMap = { 'zh-CN': zhCN, 'zh-TW': zhTW } as const;
+type Locale = keyof typeof messagesMap;
+
+/** 读取 NEXT_LOCALE cookie（middleware 回写），无则回退默认简中 */
+async function resolveLocale(): Promise<Locale> {
+  const c = await cookies();
+  const val = c.get('NEXT_LOCALE')?.value;
+  return val && (routing.locales as readonly string[]).includes(val) ? (val as Locale) : routing.defaultLocale;
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await resolveLocale();
+  const m = messagesMap[locale];
+  const app = (m as { app?: { title?: string; description?: string } }).app ?? {};
+  return {
+    title: {
+      default: app.title ?? 'LibreTV',
+      template: '%s - LibreTV',
+    },
+    description: app.description,
+    manifest: '/manifest.webmanifest',
+    icons: {
+      icon: [
+        { url: '/favicon.ico', sizes: '48x48' },
+        { url: '/icons/icon-96.png', sizes: '96x96', type: 'image/png' },
+        { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+        { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+      ],
+      apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: '#0b101a',
@@ -29,9 +47,10 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await resolveLocale();
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         {/* 首屏前同步主题，避免亮暗闪烁 */}
         <script
@@ -41,8 +60,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body>
-        <Providers>{children}</Providers>
+      <body suppressHydrationWarning>
+        <NextIntlClientProvider locale={locale} messages={messagesMap[locale]} timeZone="Asia/Taipei">
+          <Providers>{children}</Providers>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

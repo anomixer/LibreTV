@@ -12,6 +12,8 @@ import { api } from '@/lib/client-api';
 import type { SearchResultItem, SourceSearchOutcome } from '@/lib/types';
 import { SearchHistoryDropdown, useSearchHistory } from '@/components/search-history';
 import { cn, formatDisableTtl, validateSourceUrl } from '@/lib/utils';
+import { t2s } from '@/lib/opencc';
+import { useCC } from '@/lib/use-cc';
 import { useToast } from '@/components/toast';
 import { useAuth } from '@/components/auth';
 import { EmptyState } from '@/components/states';
@@ -120,6 +122,7 @@ function HomeContent() {
   const { toast } = useToast();
   const { version } = useAuth();
   const upstreamUpdate = useUpstreamUpdate(version);
+  const cc = useCC();
   const urlQuery = searchParams.get('s') || '';
   const store = useAppStore();
   const [input, setInput] = useState(urlQuery);
@@ -128,10 +131,16 @@ function HomeContent() {
   const [streamedOutcomes, setStreamedOutcomes] = useState<SourceSearchOutcome[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // URL 驱动搜索：?s= 变化时回填输入框
+  // URL 驱动搜索：?s= 变化时回填输入框（统一转为简体以匹配采集站）
   useEffect(() => {
-    if (urlQuery) setInput(urlQuery);
-  }, [urlQuery]);
+    if (urlQuery) {
+      const s = t2s(urlQuery);
+      setInput(s);
+      if (s !== urlQuery) {
+        router.replace(`/?s=${encodeURIComponent(s)}`, { scroll: false });
+      }
+    }
+  }, [urlQuery, router]);
 
   // 源名回显：失败/停用提示里显示友好名称而非裸 key
   const sourceName = (key: string) =>
@@ -194,7 +203,7 @@ function HomeContent() {
   const searchHistory = useSearchHistory(input);
 
   const runSearch = (q: string) => {
-    const query = q.trim().slice(0, 100);
+    const query = t2s(q.trim()).slice(0, 100);
     if (!query) {
       toast('请输入搜索内容', 'info');
       inputRef.current?.focus();
@@ -204,14 +213,16 @@ function HomeContent() {
       toast('请先在设置中添加并勾选点播源', 'warning');
       return;
     }
+    setInput(query);
     router.push(`/?s=${encodeURIComponent(query)}`, { scroll: false });
     searchHistory.record(query);
   };
 
   const pickHistory = (text: string) => {
-    setInput(text);
+    const query = t2s(text);
+    setInput(query);
     searchHistory.close();
-    runSearch(text);
+    runSearch(query);
   };
 
   const isSearching = Boolean(urlQuery) && searchQuery.isFetching && !searchQuery.data;
@@ -261,7 +272,7 @@ function HomeContent() {
               <h1 className="text-4xl sm:text-5xl font-bold brand-gradient">LibreTV</h1>
             </header>
           )}
-          {urlQuery && <h1 className="sr-only">LibreTV 视频搜索</h1>}
+          {urlQuery && <h1 className="sr-only" suppressHydrationWarning>{cc('LibreTV 视频搜索')}</h1>}
           {/* 定位容器比胶囊宽一圈：浮层按它的宽度对齐，接缝处不会与胶囊边框错位 1px */}
           <div ref={searchHistory.containerRef} className="relative w-full max-w-2xl">
             <form
@@ -289,7 +300,8 @@ function HomeContent() {
               >
                 <input
                   ref={inputRef}
-                  className="flex-1 min-w-0 pr-2 bg-transparent text-sm text-content placeholder:text-faint focus:outline-none"
+                  className="flex-1 min-w-0 pr-2 bg-transparent text-sm text-content placeholder:text-faint focus:outline-none notranslate"
+                  data-no-tw="true"
                   placeholder="输入影片名称..."
                   value={input}
                   maxLength={100}
@@ -328,6 +340,7 @@ function HomeContent() {
                     跟着容器一起改直角；按压改用亮度反馈（缩放会让贴合边缘露出缝隙） */}
                 <button
                   type="submit"
+                  suppressHydrationWarning
                   className={cn(
                     'btn-primary shrink-0 px-4 font-medium transition-[background-color,filter] active:brightness-90',
                     '!rounded-l-none',
@@ -335,7 +348,7 @@ function HomeContent() {
                   )}
                 >
                   <Icon name="search" className="w-4 h-4" />
-                  搜索
+                  {cc('搜索')}
                 </button>
               </div>
             </form>
@@ -356,18 +369,18 @@ function HomeContent() {
 
         {/* 搜索结果 */}
         {urlQuery && (
-          <section aria-label="搜索结果" className="mb-10">
+          <section aria-label={cc('搜索结果')} suppressHydrationWarning className="mb-10">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm text-muted">
-                “<span className="text-content">{urlQuery}</span>” 的搜索结果
+              <h2 className="text-sm text-muted" suppressHydrationWarning>
+                “<span className="text-content">{urlQuery}</span>” {cc('的搜索结果')}
                 {isSearching ? (
                   <span className="text-faint">
-                    （已就绪 {streamedOutcomes.length}/{selectedSources.length} 个源…）
+                    （{cc('已就绪')} {streamedOutcomes.length}/{selectedSources.length} {cc('个源…')}）
                   </span>
                 ) : (
                   searchQuery.data && (
                     <span className="text-faint">
-                      （{groups.length} 部影片 · {list.length} 条结果{failures.length > 0 && `，${failures.length} 个源失败`}）
+                      （{groups.length} {cc('部影片')} · {list.length} {cc('条结果')}{failures.length > 0 && `，${failures.length} ${cc('个源失败')}`}）
                     </span>
                   )
                 )}
@@ -376,11 +389,11 @@ function HomeContent() {
 
             {failures.length > 0 && (
               <div className="mb-3 text-xs bg-chip rounded-lg px-3 py-2 flex flex-wrap gap-x-3 gap-y-1">
-                <span className="text-faint">{isSearching ? '以下源暂时无响应：' : '部分点播源请求失败：'}</span>
+                <span className="text-faint" suppressHydrationWarning>{isSearching ? cc('以下源暂时无响应：') : cc('部分点播源请求失败：')}</span>
                 {failures.map((f) => (
-                  <span key={f.sourceKey} className={f.timedOut ? 'text-warning' : 'text-faint'}>
+                  <span key={f.sourceKey} className={f.timedOut ? 'text-warning' : 'text-faint'} suppressHydrationWarning>
                     {f.timedOut ? '⏱' : '✗'} {sourceName(f.sourceKey)}
-                    {f.timedOut ? ' 超时' : ''}
+                    {f.timedOut ? ` ${cc('超时')}` : ''}
                   </span>
                 ))}
               </div>
@@ -441,8 +454,9 @@ function HomeContent() {
         {!urlQuery && (
           <RecommendSection
             onPick={(title) => {
-              setInput(title);
-              runSearch(title);
+              const query = t2s(title);
+              setInput(query);
+              runSearch(query);
             }}
           />
         )}

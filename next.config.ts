@@ -1,6 +1,9 @@
 import type { NextConfig } from 'next';
 import fs from 'node:fs';
 import path from 'node:path';
+import createNextIntlPlugin from 'next-intl/plugin';
+
+const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 /** 版本号以 package.json 为单一来源，构建时注入 process.env.APP_VERSION（/api/status 使用） */
 function readAppVersion(): string {
@@ -24,4 +27,4 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

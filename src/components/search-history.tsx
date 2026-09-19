@@ -167,7 +167,8 @@ export function SearchHistoryDropdown({
         id={id}
         role="listbox"
         aria-label="最近搜索"
-        className="max-h-[min(70vh,400px)] overflow-y-auto scrollbar-thin py-1"
+        data-no-tw="true"
+        className="max-h-[min(70vh,400px)] overflow-y-auto scrollbar-thin py-1 notranslate"
       >
         {matches.map((h, i) => (
           <li

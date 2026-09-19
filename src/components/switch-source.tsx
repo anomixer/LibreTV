@@ -10,6 +10,7 @@ import { useToast } from './toast';
 import { Icon } from './icon';
 import { EmptyState, LoadingState } from './states';
 import { useFocusTrap } from './use-focus-trap';
+import { t2s } from '@/lib/opencc';
 
 /**
  * 换源面板：跨源按标题搜索 → 匹配同名/同前缀资源 → 并发测速（详情接口耗时）→ 按速度排序展示。
@@ -84,10 +85,11 @@ export function SwitchSourceModal({
     let cancelled = false;
 
     (async () => {
-      // 1) 并行搜索所有选中源
+      // 1) 并行搜索所有选中源（转为简体搜索采集站）
       setPhase('searching');
       try {
-        const { list } = await api.search(currentTitle, sources, store.yellowFilter, { signal: controller.signal });
+        const searchTitle = t2s(currentTitle);
+        const { list } = await api.search(searchTitle, sources, store.yellowFilter, { signal: controller.signal });
         if (cancelled) return;
 
         // 匹配口径：优先完全同名，其次名称以标题开头（兼容「小偷 HD」「小偷[电影解说]」这类修饰名）。
