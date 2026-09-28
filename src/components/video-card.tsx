@@ -1,13 +1,12 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import type { SearchResultItem } from '@/lib/types';
-import { buildImageUrl } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import { useCC } from '@/lib/use-cc';
+import { SmartImage } from './smart-image';
 
-// —— 跨源同名聚合 ——
+// ΓÇöΓÇö Φ╖¿µ║ÉσÉîσÉìΦüÜσÉê ΓÇöΓÇö
 
 export interface AggregatedGroup {
   key: string;
@@ -32,9 +31,9 @@ function buildGroup(name: string, year: string | undefined, items: SearchResultI
 }
 
 /**
- * 把扁平的跨源搜索结果按「同名影片」聚合：
- * - 以名称分桶；桶内年份不一致时（同名翻拍）按年份拆分，无年份的条目并入年份桶；
- * - 保持传入顺序（搜索结果已按名称排序）。
+ * µèèµëüσ╣│τÜäΦ╖¿µ║ÉµÉ£τ┤óτ╗ôµ₧£µîëπÇîσÉîσÉìσ╜▒τëçπÇìΦüÜσÉê∩╝Ü
+ * - Σ╗ÑσÉìτº░σêåµí╢∩╝¢µí╢σåàσ╣┤Σ╗╜Σ╕ìΣ╕ÇΦç┤µù╢∩╝êσÉîσÉìτ┐╗µïì∩╝ëµîëσ╣┤Σ╗╜µïåσêå∩╝îµùáσ╣┤Σ╗╜τÜäµ¥íτ¢«σ╣╢σàÑσ╣┤Σ╗╜µí╢∩╝¢
+ * - Σ┐¥µîüΣ╝áσàÑΘí║σ║Å∩╝êµÉ£τ┤óτ╗ôµ₧£σ╖▓µîëσÉìτº░µÄÆσ║Å∩╝ëπÇé
  */
 export function aggregateResults(list: SearchResultItem[]): AggregatedGroup[] {
   const byName = new Map<string, SearchResultItem[]>();
@@ -61,9 +60,9 @@ export function aggregateResults(list: SearchResultItem[]): AggregatedGroup[] {
 }
 
 /**
- * 聚合影片卡片：
- * - 单源：点击直接打开该源详情（与旧体验一致）；
- * - 多源：显示「N 个来源」徽章，点击展开各源列表，选择具体源后打开详情。
+ * ΦüÜσÉêσ╜▒τëçσìíτëç∩╝Ü
+ * - σìòµ║É∩╝Üτé╣σç╗τ¢┤µÄÑµëôσ╝ÇΦ»Ñµ║ÉΦ»ªµâà∩╝êΣ╕ÄµùºΣ╜ôΘ¬îΣ╕ÇΦç┤∩╝ë∩╝¢
+ * - σñÜµ║É∩╝Üµÿ╛τñ║πÇîN Σ╕¬µ¥Ñµ║ÉπÇìσ╛╜τ½á∩╝îτé╣σç╗σ▒òσ╝ÇσÉäµ║ÉσêùΦí¿∩╝îΘÇëµï⌐σà╖Σ╜ôµ║ÉσÉÄµëôσ╝ÇΦ»ªµâàπÇé
  */
 export function AggregatedCard({
   group,
@@ -72,14 +71,11 @@ export function AggregatedCard({
   group: AggregatedGroup;
   onOpen: (item: SearchResultItem) => void;
 }) {
-  const cc = useCC();
   const imageProxyMode = useAppStore((s) => s.imageProxyMode);
   const customImageProxy = useAppStore((s) => s.customImageProxy);
   const [imgFailed, setImgFailed] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const primary = buildImageUrl(group.pic, imageProxyMode, customImageProxy);
-  useEffect(() => setImgFailed(false), [primary]);
-  const showImg = primary && !imgFailed;
+  const showImg = !!group.pic && !imgFailed;
 
   const multi = group.items.length > 1;
   const adult = useMemo(() => group.items.some((i) => i.isAdult), [group.items]);
@@ -91,7 +87,7 @@ export function AggregatedCard({
 
   return (
     <div className={cn('card', !multi && 'hover:scale-[1.02] hover:shadow-md', multi && expanded && 'ring-1 ring-accent/40')}>
-      {/* 不用 h-full：展开面板需要撑高卡片，等高裁切会让面板不可见 */}
+      {/* Σ╕ìτö¿ h-full∩╝Üσ▒òσ╝ÇΘ¥óµ¥┐Θ£ÇΦªüµÆæΘ½ÿσìíτëç∩╝îτ¡ëΘ½ÿΦúüσêçΣ╝ÜΦ«⌐Θ¥óµ¥┐Σ╕ìσÅ»Φºü */}
       <div
         className="flex h-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60"
         role="button"
@@ -107,18 +103,18 @@ export function AggregatedCard({
       >
         {showImg ? (
           <div className="relative flex-shrink-0 w-[105px] sm:w-[120px] aspect-[2/3] bg-chip">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={primary}
+            <SmartImage
+              url={group.pic}
+              mode={imageProxyMode}
+              customProxy={customImageProxy}
               alt={group.name}
               className="absolute inset-0 h-full w-full object-cover"
-              loading="lazy"
-              onError={() => setImgFailed(true)}
+              onExhausted={() => setImgFailed(true)}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent" />
             {multi && (
               <span className="absolute top-1.5 left-1.5 tag bg-black/70 text-accent font-medium">
-                {group.items.length} {cc('源')}
+                {group.items.length} µ║É
               </span>
             )}
           </div>
@@ -129,7 +125,7 @@ export function AggregatedCard({
             </svg>
             {multi && (
               <span className="absolute top-1.5 left-1.5 tag bg-black/70 text-accent font-medium">
-                {group.items.length} {cc('源')}
+                {group.items.length} µ║É
               </span>
             )}
           </div>
@@ -145,11 +141,11 @@ export function AggregatedCard({
               {group.year && <span className="tag bg-purple-500/15 text-purple-600 dark:text-purple-300">{group.year}</span>}
               {adult && <span className="tag bg-pink-500/15 text-pink-600 dark:text-pink-400">(18+)</span>}
             </div>
-            <p className="text-xs text-muted line-clamp-2 mb-2">{cc(group.remarks || '暂无介绍')}</p>
+            <p className="text-xs text-muted line-clamp-2 mb-2">{group.remarks || 'µÜéµùáΣ╗ïτ╗ì'}</p>
           </div>
           <div className="flex items-center justify-between mt-auto pt-1.5 border-t border-line">
             <span className="tag bg-chip text-muted truncate max-w-[80%]">
-              {multi ? `${group.items.length} ${cc('个来源')}` : group.items[0].sourceName}
+              {multi ? `${group.items.length} Σ╕¬µ¥Ñµ║É` : group.items[0].sourceName}
             </span>
             {multi && (
               <svg
@@ -168,7 +164,7 @@ export function AggregatedCard({
 
       {multi && expanded && (
         <div className="border-t border-line p-2.5 animate-fade-in">
-          <p className="text-[10px] text-faint mb-1.5">{cc('选择来源播放')}</p>
+          <p className="text-[10px] text-faint mb-1.5">ΘÇëµï⌐µ¥Ñµ║ÉµÆ¡µö╛</p>
           <div className="flex flex-wrap gap-1.5">
             {group.items.map((item) => (
               <button
@@ -183,10 +179,10 @@ export function AggregatedCard({
                   e.stopPropagation();
                   onOpen(item);
                 }}
-                aria-label={cc(`使用 ${item.sourceName} 播放`)}
+                aria-label={`Σ╜┐τö¿ ${item.sourceName} µÆ¡µö╛`}
               >
                 <span className="font-medium text-content truncate max-w-[9em]">{item.sourceName}</span>
-                <span className="text-faint truncate max-w-[7em]">{cc(item.remarks || '暂无介绍')}</span>
+                <span className="text-faint truncate max-w-[7em]">{item.remarks || 'µÜéµùáΣ╗ïτ╗ì'}</span>
                 <svg
                   className="w-3.5 h-3.5 text-accent shrink-0 transition-transform group-hover:scale-110"
                   fill="currentColor"
@@ -204,15 +200,12 @@ export function AggregatedCard({
   );
 }
 
-/** 影片卡片：封面加载失败时逐级降级到占位图（未聚合的单一结果使用） */
+/** σ╜▒τëçσìíτëç∩╝Üσ░üΘ¥óσèáΦ╜╜σñ▒Φ┤Ñµù╢ΘÇÉτ║ºΘÖìτ║ºσê░σìáΣ╜ìσ¢╛∩╝êµ£¬ΦüÜσÉêτÜäσìòΣ╕Çτ╗ôµ₧£Σ╜┐τö¿∩╝ë */
 export function VideoCard({ item, onClick }: { item: SearchResultItem; onClick: () => void }) {
   const imageProxyMode = useAppStore((s) => s.imageProxyMode);
   const customImageProxy = useAppStore((s) => s.customImageProxy);
   const [imgFailed, setImgFailed] = useState(false);
-  const primary = buildImageUrl(item.pic, imageProxyMode, customImageProxy);
-  // 加载方式变化时重置失败状态，允许新地址重试
-  useEffect(() => setImgFailed(false), [primary]);
-  const showImg = primary && !imgFailed;
+  const showImg = !!item.pic && !imgFailed;
 
   return (
     <div
@@ -222,7 +215,7 @@ export function VideoCard({ item, onClick }: { item: SearchResultItem; onClick: 
       onClick={onClick}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
-          // 阻止空格触发页面滚动（AggregatedCard 已是此写法，此处对齐）
+          // Θÿ╗µ¡óτ⌐║µá╝ΦºªσÅæΘí╡Θ¥óµ╗Üσè¿∩╝êAggregatedCard σ╖▓µÿ»µ¡ñσåÖµ│ò∩╝îµ¡ñσñäσ»╣Θ╜É∩╝ë
           e.preventDefault();
           onClick();
         }
@@ -231,13 +224,13 @@ export function VideoCard({ item, onClick }: { item: SearchResultItem; onClick: 
       <div className="flex h-full">
         {showImg ? (
           <div className="relative flex-shrink-0 w-[105px] sm:w-[120px] aspect-[2/3] bg-chip">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={primary}
+            <SmartImage
+              url={item.pic}
+              mode={imageProxyMode}
+              customProxy={customImageProxy}
               alt={item.name}
               className="h-full w-full object-cover"
-              loading="lazy"
-              onError={() => setImgFailed(true)}
+              onExhausted={() => setImgFailed(true)}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent" />
           </div>
@@ -258,7 +251,7 @@ export function VideoCard({ item, onClick }: { item: SearchResultItem; onClick: 
               {item.typeName && <span className="tag bg-accent/15 text-accent">{item.typeName}</span>}
               {item.year && <span className="tag bg-purple-500/15 text-purple-600 dark:text-purple-300">{item.year}</span>}
             </div>
-            <p className="text-xs text-muted line-clamp-2 mb-2">{item.remarks || '暂无介绍'}</p>
+            <p className="text-xs text-muted line-clamp-2 mb-2">{item.remarks || 'µÜéµùáΣ╗ïτ╗ì'}</p>
           </div>
           <div className="flex items-center justify-between mt-auto pt-1.5 border-t border-line">
             <span className="tag bg-chip text-muted truncate max-w-[80%]">{item.sourceName}</span>
@@ -269,13 +262,12 @@ export function VideoCard({ item, onClick }: { item: SearchResultItem; onClick: 
   );
 }
 
-/** 豆瓣推荐卡片（无来源徽章，点击直接搜索） */
+/** Φ▒åτôúµÄ¿ΦìÉσìíτëç∩╝êµùáµ¥Ñµ║Éσ╛╜τ½á∩╝îτé╣σç╗τ¢┤µÄÑµÉ£τ┤ó∩╝ë */
 export function DoubanCard({ item, onClick }: { item: { title: string; cover: string; rating?: string }; onClick: () => void }) {
   const imageProxyMode = useAppStore((s) => s.imageProxyMode);
   const customImageProxy = useAppStore((s) => s.customImageProxy);
   const [imgFailed, setImgFailed] = useState(false);
-  const primary = buildImageUrl(item.cover, imageProxyMode, customImageProxy);
-  useEffect(() => setImgFailed(false), [primary]);
+  useEffect(() => setImgFailed(false), [item.cover]);
 
   return (
     <div
@@ -285,21 +277,21 @@ export function DoubanCard({ item, onClick }: { item: { title: string; cover: st
       onClick={onClick}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
-          // 阻止空格触发页面滚动（AggregatedCard 已是此写法，此处对齐）
+          // Θÿ╗µ¡óτ⌐║µá╝ΦºªσÅæΘí╡Θ¥óµ╗Üσè¿∩╝êAggregatedCard σ╖▓µÿ»µ¡ñσåÖµ│ò∩╝îµ¡ñσñäσ»╣Θ╜É∩╝ë
           e.preventDefault();
           onClick();
         }
       }}
     >
       <div className="relative aspect-[2/3] bg-chip">
-        {primary && !imgFailed ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={primary}
+        {item.cover && !imgFailed ? (
+          <SmartImage
+            url={item.cover}
+            mode={imageProxyMode}
+            customProxy={customImageProxy}
             alt={item.title}
             className="w-full h-full object-cover"
-            loading="lazy"
-            onError={() => setImgFailed(true)}
+            onExhausted={() => setImgFailed(true)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-chip">
@@ -310,7 +302,7 @@ export function DoubanCard({ item, onClick }: { item: { title: string; cover: st
         )}
         {item.rating && (
           <span className={cn('absolute top-1.5 right-1.5 tag bg-black/70 text-rating font-medium')}>
-            ★ {item.rating}
+            Γÿà {item.rating}
           </span>
         )}
       </div>
