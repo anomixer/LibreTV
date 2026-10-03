@@ -14,7 +14,7 @@ import {
 import { detectSavingCapability, pickSaveTarget } from '@/lib/download-saver';
 
 /**
- * 全局下载管理器（借鉴 MoonTV DownloadManager，UI 采用本站 Drawer 模式）：
+ * 全局下载管理器（UI 采用本站 Drawer 模式）：
  * - 入口：header 下载图标 + 播放页「下载本集」（均派发 window 事件）；
  * - 并发：全局最多同时进行 3 个任务，其余排队（waiting）；
  * - 断点：已下载分片写入 Cache Storage（网络层断点）；
@@ -171,6 +171,7 @@ export function DownloadManager({ isOpen, onClose }: { isOpen: boolean; onClose:
         await db.downloads.put(entry);
         refresh();
         scheduleNext();
+        toast(`《${detail.title}》已加入下载队列`, 'success');
       })();
     };
 
@@ -220,7 +221,13 @@ export function DownloadManager({ isOpen, onClose }: { isOpen: boolean; onClose:
     await clearDownloadChunks(entry.id);
     await db.downloads.delete(entry.id);
     refresh();
-    toast(`《${entry.title}》已取消下载`, 'info');
+    // 终态（已完成/失败）删的是记录而非终止任务；文件已保存在用户选择的位置，不受影响
+    toast(
+      entry.status === 'completed' || entry.status === 'error'
+        ? `《${entry.title}》已删除下载记录`
+        : `《${entry.title}》已取消下载`,
+      'info'
+    );
   };
 
   const statusLabel: Record<DownloadTaskEntry['status'], string> = {
@@ -274,7 +281,7 @@ export function DownloadManager({ isOpen, onClose }: { isOpen: boolean; onClose:
                 )}
                 <button
                   type="button"
-                  aria-label="取消并删除任务"
+                  aria-label="删除下载任务"
                   className="p-1.5 rounded bg-chip hover:bg-hover text-content transition-colors"
                   onClick={() => void onCancel(t)}
                 >

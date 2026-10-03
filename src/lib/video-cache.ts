@@ -1,7 +1,8 @@
 import { db } from './db';
+import { documentBaseURI } from './m3u8';
 
 /**
- * 视频片段本地缓存层（借鉴 MoonTV video-cache）。
+ * 视频片段本地缓存层。
  *
  * 职责边界：Cache Storage 读写 + IndexedDB（Dexie segmentMeta 表）元数据 + 两轮 LRU 淘汰。
  * 不做任何与播放器状态相关的判断，因此预取循环可以在视频暂停、页面切到后台时继续工作。
@@ -13,7 +14,8 @@ import { db } from './db';
  *
  * key 一致性是缓存命中的前提：hls.js loader 请求分片时的 context.url 与预取器
  * 解析出的分片地址，都必须经 `new URL()` 归一化（抹平默认端口/百分号编码差异）。
- * 播放列表是代理改写形式（/api/proxy?url=…）时分片也是同源地址，两种形式天然一致。
+ * 播放列表走代理改写形式（/api/proxy?url=…）时分片也是**本站根相对串**，
+ * 不带基址的 `new URL()` 会原样放过——必须锚到文档基址才与绝对形式收敛为同一个 key。
  */
 
 export const VIDEO_CACHE_NAME = 'libretv-video-v1';
@@ -70,10 +72,13 @@ export function saveCacheSettings(next: Partial<CacheSettings>): CacheSettings {
   return merged;
 }
 
-/** 分片缓存 key：`new URL()` 归一化（与 hls.js loader 侧一致，缓存命中的前提） */
+/**
+ * 分片缓存 key：归一化成绝对地址（两侧一致，缓存命中的前提）。
+ * 以文档基址作基线，本站根相对的代理形式与绝对形式才会收敛到同一个串。
+ */
 export function buildSegmentCacheKey(segmentUrl: string): string {
   try {
-    return new URL(segmentUrl).href;
+    return new URL(segmentUrl, documentBaseURI()).href;
   } catch {
     return segmentUrl;
   }
