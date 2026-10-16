@@ -348,6 +348,7 @@ function HomeContent() {
                     <AggregatedCard
                       key={group.key}
                       group={group}
+                      sources={selectedSources}
                       onOpen={(item) => setDetailItem(item)}
                     />
                   ))}
